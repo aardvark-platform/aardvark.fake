@@ -160,7 +160,7 @@ module AdditionalSources =
 
             let code = 
                 if modTime > cacheTime then
-                    shellExec { CommandLine = "/C build.cmd CreatePackage"; Program = "cmd.exe"; WorkingDirectory = folder; Args = [] }
+                    shellExec { CommandLine = "/C build.cmd CreatePackage Configuration=Debug"; Program = "cmd.exe"; WorkingDirectory = folder; Args = [] }
                 else
                     0
 

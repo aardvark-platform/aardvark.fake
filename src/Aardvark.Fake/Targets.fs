@@ -10,6 +10,11 @@ open System.Text.RegularExpressions
 module DefaultTargets =
     let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
 
+    let private debugBuild =
+        match environVarOrNone "Configuration" with
+            | Some c when c.Trim().ToLower() = "debug" -> true
+            | _ -> false
+
     let install(solutionNames : seq<string>) = 
         let core = solutionNames
 
@@ -60,7 +65,10 @@ module DefaultTargets =
         )
 
         Target "Compile" (fun () ->
-            MSBuildRelease "bin/Release" "Build" core |> ignore
+            if debugBuild then
+                MSBuildDebug "bin/Release" "Build" core |> ignore
+            else
+                MSBuildRelease "bin/Release" "Build" core |> ignore
         )
 
 
