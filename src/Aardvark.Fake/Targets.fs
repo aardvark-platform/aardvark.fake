@@ -202,6 +202,51 @@ module DefaultTargets =
                     ()
         )
 
+        Target "Help" (fun () ->
+
+            printfn "aardvark build script"
+            printfn "  syntax: build [Target] where target is one of the following"
+            printfn "    Default (which is executed when no target is given)"
+            printfn "      same like compile but also copying native dependencies (from libs/Native/PROJECTNAME)"
+            printfn "      to bin/Release and injecting them as resource into the resulting dll/exe"
+            printfn "    Compile"
+            printfn "      builds the project's solution to bin/Release"
+            printfn "    Clean"
+            printfn "      deletes all output files in bin/Debug and bin/Release"
+            printfn "    CreatePackage"
+            printfn "      creates packages for all projects having a paket.template using the current"
+            printfn "      git tag as version (note that the tag needs to have a comment)."
+            printfn "      the resulting packages are stored in bin/*.nupkg"
+            printfn "    Push"
+            printfn "      creates the packages and deploys them to \\\\hobel\\NuGet\\ and all other"
+            printfn "      feeds specified in deploy.targets"
+            printfn "    Restore"
+            printfn "      ensures that all packages given in paket.lock are installed"
+            printfn "      with their respective version."
+            printfn "    Install"
+            printfn "      installs all packages specified in paket.dependencies and"
+            printfn "      adjusts project files according to paket.references (next to the project)"
+            printfn "      may also perform a new resolution when versions in paket.dependencies have changed."
+            printfn "    Update"
+            printfn "      searches for newer compatible version (according to paket.dependencies)"
+            printfn "      and installs them if possible. this target also adjusts the project files"
+            printfn ""
+            printfn "  advanced features"
+            printfn "    AddSource <folder>"
+            printfn "      adds the repository located in <folder> as source dependecy causing all packages"
+            printfn "      referenced from that repository to be overriden by a locally built variant."
+            printfn "      Note that these overrides are not version-aware and will override all packages"
+            printfn "      without any compatibility checks."
+            printfn "      Furthermore these source packages \"survive\" Install/Update/Restore and"
+            printfn "      are rebuilt (upon restore/install/update) when files are modified in the source folder"
+            printfn "    RemoveSource <folder>"
+            printfn "      adds the repository located in <folder> from the source dependencies and restores"
+            printfn "      the original version from its respective package source."
+
+
+        )
+
+
         Target "Push" DoNothing
         Target "Default" DoNothing
 
