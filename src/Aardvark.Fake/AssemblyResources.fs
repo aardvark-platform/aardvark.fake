@@ -25,7 +25,7 @@ module AssemblyResources =
             addFolderToArchive p d archive
 
     let addFolder (folder : string) (assemblyPath : string) =
-        let a = AssemblyDefinition.ReadAssembly assemblyPath
+        let a = AssemblyDefinition.ReadAssembly(assemblyPath,ReaderParameters(ReadSymbols=true))
 
         let mem = new MemoryStream()
         let archive = new ZipArchive(mem, ZipArchiveMode.Create, true)
