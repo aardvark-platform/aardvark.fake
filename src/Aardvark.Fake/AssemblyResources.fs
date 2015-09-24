@@ -25,7 +25,9 @@ module AssemblyResources =
             addFolderToArchive p d archive
 
     let addFolder (folder : string) (assemblyPath : string) =
-        let a = AssemblyDefinition.ReadAssembly(assemblyPath,ReaderParameters(ReadSymbols=true))
+        let symbols = File.Exists (Path.ChangeExtension(assemblyPath, "pdb"))
+
+        let a = AssemblyDefinition.ReadAssembly(assemblyPath,ReaderParameters(ReadSymbols=symbols))
 
         let mem = new MemoryStream()
         let archive = new ZipArchive(mem, ZipArchiveMode.Create, true)
@@ -47,7 +49,7 @@ module AssemblyResources =
 
         a.MainModule.Resources.Add(r)
         tracefn "added native resources to %A" (Path.GetFileName assemblyPath)
-        a.Write( assemblyPath, WriterParameters(WriteSymbols=true))
+        a.Write( assemblyPath, WriterParameters(WriteSymbols=symbols))
 
         ()
 
