@@ -47,7 +47,7 @@ module AssemblyResources =
 
         a.MainModule.Resources.Add(r)
         tracefn "added native resources to %A" (Path.GetFileName assemblyPath)
-        a.Write assemblyPath
+        a.Write( assemblyPath, WriterParameters(WriteSymbols=true))
 
         ()
 
