@@ -59,8 +59,7 @@ module AssemblyResources =
 
     let copyDependencies (folder : string) (targets : seq<string>) =
         let arch = 
-            if IntPtr.Size = 8 then "AMD64"
-            else "x86"
+            "AMD64" // developer machines are assumed to be 64 bit machines
 
         let platform =
             match Environment.OSVersion.Platform with
