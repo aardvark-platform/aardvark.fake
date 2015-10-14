@@ -150,7 +150,7 @@ module AdditionalSources =
             else
                 Map.empty |> ref
 
-        let buildSourceFolder (folder : string) : Map<string, Version> =
+        let buildSourceFolder (folder : string) (config : string) : Map<string, Version> =
             let cacheTime =
                 match Map.tryFind folder !cacheTimes with
                     | Some t -> t
@@ -160,7 +160,8 @@ module AdditionalSources =
 
             let code = 
                 if modTime > cacheTime then
-                    shellExec { CommandLine = "/C build.cmd CreatePackage Configuration=Debug"; Program = "cmd.exe"; WorkingDirectory = folder; Args = [] }
+                    shellExec { CommandLine = sprintf "/C build.cmd CreatePackage Configuration=%s" config; 
+                                Program = "cmd.exe"; WorkingDirectory = folder; Args = [] }
                 else
                     0
 
@@ -181,7 +182,15 @@ module AdditionalSources =
                     |> Seq.map (fun (id,versions) -> (id, versions |> Seq.map snd |> Seq.max))
                     |> Map.ofSeq
 
-        let sourcePackages = sourceLines |> List.map (fun f -> f, buildSourceFolder f) |> Map.ofList
+        let sourcePackages = 
+            sourceLines 
+                |> List.map (fun line -> 
+                        match line.Split(';') with
+                         | [|source|] -> source, buildSourceFolder source "Debug"
+                         | [|source;config|] -> source, buildSourceFolder source config
+                         | _ -> failwithf "could not parse source dependency line (sources.lock): %s" line
+                    ) 
+                |> Map.ofList
         let installedPackages = paketDependencies.GetInstalledPackages() |> List.map fst |> Set.ofList
 
 
