@@ -182,6 +182,7 @@ module AdditionalSources =
                     |> Seq.map (fun (id,versions) -> (id, versions |> Seq.map snd |> Seq.max))
                     |> Map.ofSeq
 
+        printfn "grabbing packages"
         let sourcePackages = 
             sourceLines 
                 |> List.map (fun line -> 
@@ -191,6 +192,7 @@ module AdditionalSources =
                          | _ -> failwithf "could not parse source dependency line (sources.lock): %s" line
                     ) 
                 |> Map.ofList
+        printfn "source packages: %A" sourcePackages
         let installedPackages = paketDependencies.GetInstalledPackages() |> List.map fst |> Set.ofList
 
 
