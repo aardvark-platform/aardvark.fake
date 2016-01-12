@@ -192,7 +192,7 @@ module AdditionalSources =
                     ) 
                 |> Map.ofList
         printfn "source packages: %A" sourcePackages
-        let installedPackages = paketDependencies.GetInstalledPackages() |> List.map (fun (a,_,_) -> a) |> Set.ofList
+        let installedPackages = paketDependencies.GetInstalledPackages() |> List.map (fun (a,_) -> a) |> Set.ofList
 
 
         for (source, packages) in Map.toSeq sourcePackages do
