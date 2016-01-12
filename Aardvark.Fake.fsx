@@ -1,4 +1,11 @@
 ﻿#r @"Packages\FAKE\tools\FakeLib.dll"
+#r @"Packages\Paket.Core\lib\net45\Paket.Core.dll"
+#r @"Packages\Mono.Cecil\lib\net45\Mono.Cecil.dll"
+#r "System.IO.Compression.dll"
+#r "System.IO.Compression.FileSystem.dll"
+#load "AdditionalSources.fsx"
+#load "AssemblyResources.fsx"
+#load "Targets.fsx"
 namespace Aardvark.Fake
 
 open Fake
