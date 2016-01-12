@@ -8,6 +8,7 @@ open System.Text.RegularExpressions
 
 
 module DefaultTargets =
+    open Aardvark.Fake
     let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
 
     let debugBuild =
@@ -19,7 +20,7 @@ module DefaultTargets =
         let core = solutionNames
 
         Target "Install" (fun () ->
-            AdditionalSources.paketDependencies.Install(false, false, false, true)
+            AdditionalSources.paketDependencies.Install(false, false)
             AdditionalSources.installSources ()
         )
 
@@ -27,7 +28,7 @@ module DefaultTargets =
             if File.Exists "paket.lock" then
                 AdditionalSources.paketDependencies.Restore()
             else
-                AdditionalSources.paketDependencies.Install(false, false, false, true)
+                AdditionalSources.paketDependencies.Install(false, false)
         
             AdditionalSources.installSources ()
         )

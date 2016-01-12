@@ -1,5 +1,4 @@
 ﻿namespace Aardvark.Fake
-
 open System.IO
 open System
 open System.Diagnostics
@@ -72,7 +71,7 @@ module AdditionalSources =
     let private cacheFile = Path.Combine(Path.GetTempPath(), getHash Environment.CurrentDirectory)
 
     // since autorestore might overwrite our source-dependencies we simply turn it off
-    let paketDependencies = Paket.Dependencies.Locate()
+    let paketDependencies = Paket.Dependencies.Locate(Environment.CurrentDirectory)
     do paketDependencies.TurnOffAutoRestore()
 
     // read a package id and version from a paket.template file
@@ -193,7 +192,7 @@ module AdditionalSources =
                     ) 
                 |> Map.ofList
         printfn "source packages: %A" sourcePackages
-        let installedPackages = paketDependencies.GetInstalledPackages() |> List.map fst |> Set.ofList
+        let installedPackages = paketDependencies.GetInstalledPackages() |> List.map (fun (a,_,_) -> a) |> Set.ofList
 
 
         for (source, packages) in Map.toSeq sourcePackages do

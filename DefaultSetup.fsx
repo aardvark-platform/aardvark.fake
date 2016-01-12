@@ -1,24 +1,14 @@
-﻿#I @"packages\build"
-#I @"packages"
-#I @"..\..\..\..\packages\build"
-#r @"FAKE\tools\FakeLib.dll"
-#r @"Paket.Core\lib\net45\Paket.Core.dll"
-#r @"Mono.Cecil\lib\net45\Mono.Cecil.dll"
-#r "System.IO.Compression.dll"
-#r "System.IO.Compression.FileSystem.dll"
-#load "AdditionalSources.fsx"
-#load "AssemblyResources.fsx"
-#load "Targets.fsx"
-namespace Aardvark.Fake
+﻿namespace Aardvark.Fake
 
-open Fake
-open System
-open System.IO
-open System.Diagnostics
-open System.Text.RegularExpressions
+module DefaultSetup =
+    open Fake
+    open System
+    open System.IO
+    open System.Diagnostics
+    open System.Text.RegularExpressions
+    open Aardvark.Fake
 
 
-module DefaultTargets =
     let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
 
     let debugBuild =
@@ -30,7 +20,7 @@ module DefaultTargets =
         let core = solutionNames
 
         Target "Install" (fun () ->
-            AdditionalSources.paketDependencies.Install(false, false, false, true)
+            AdditionalSources.paketDependencies.Install(false, false)
             AdditionalSources.installSources ()
         )
 
@@ -38,7 +28,7 @@ module DefaultTargets =
             if File.Exists "paket.lock" then
                 AdditionalSources.paketDependencies.Restore()
             else
-                AdditionalSources.paketDependencies.Install(false, false, false, true)
+                AdditionalSources.paketDependencies.Install(false, false)
         
             AdditionalSources.installSources ()
         )
