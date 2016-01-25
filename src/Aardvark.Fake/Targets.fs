@@ -88,31 +88,6 @@ module DefaultTargets =
         )
 
 
-        Target "DeployToHobel" (fun () ->
-            let packages = !!"bin/*.nupkg"
-            let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
-            let tag = Fake.Git.Information.getLastTag()
-
-            let myPackages = 
-                packages 
-                    |> Seq.choose (fun p ->
-                        let m = packageNameRx.Match (Path.GetFileName p)
-                        if m.Success then 
-                            Some(m.Groups.["name"].Value)
-                        else
-                            None
-                    )
-                    |> Set.ofSeq
-
-            try
-                for id in myPackages do
-                    let source = sprintf "bin/%s.%s.nupkg" id tag
-                    let target = sprintf @"\\hobel.ra1.vrvis.lan\NuGet\%s.%s.nupkg" id tag
-                    File.Copy(source, target, true)
-            with e ->
-                traceError (string e)
-        )
-
         Target "Deploy" (fun () ->
             let rx = Regex @"(?<url>[^ ]+)[ \t]*(?<keyfile>[^ ]+)"
             let targets = "deploy.targets"
@@ -218,8 +193,7 @@ module DefaultTargets =
             printfn "      git tag as version (note that the tag needs to have a comment)."
             printfn "      the resulting packages are stored in bin/*.nupkg"
             printfn "    Push"
-            printfn "      creates the packages and deploys them to \\\\hobel\\NuGet\\ and all other"
-            printfn "      feeds specified in deploy.targets"
+            printfn "      creates the packages and deploys them to all feeds specified in deploy.targets"
             printfn "    Restore"
             printfn "      ensures that all packages given in paket.lock are installed"
             printfn "      with their respective version."
@@ -257,10 +231,8 @@ module DefaultTargets =
         "AddNativeResources" ==> "CreatePackage" |> ignore
         "Compile" ==> "CreatePackage" |> ignore
         "CreatePackage" ==> "Deploy" |> ignore
-        "CreatePackage" ==> "DeployToHobel" |> ignore
 
         "Deploy" ==> "Push" |> ignore
-        "DeployToHobel" ==> "Push" |> ignore
 
         "Compile" ==> "AddNativeResources" ==> "Default" |> ignore
     
