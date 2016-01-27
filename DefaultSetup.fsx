@@ -278,4 +278,3 @@ module DefaultSetup =
         "DeployToHobel" ==> "Push" |> ignore
 
         "Compile" ==> "AddNativeResources" ==> "Default" |> ignore
-*)
