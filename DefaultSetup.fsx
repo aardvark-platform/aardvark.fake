@@ -1,4 +1,18 @@
-﻿namespace Aardvark.Fake
+﻿do printfn "%A" __SOURCE_DIRECTORY__
+#I @"..\..\..\..\packages\build"
+#r @"FAKE\tools\FakeLib.dll"
+#r @"Chessie\lib\net40\Chessie.dll"
+#r @"Paket.Core\lib\net45\Paket.Core.dll"
+#r @"Mono.Cecil\lib\net45\Mono.Cecil.dll"
+#r "System.IO.Compression.dll"
+#r "System.IO.Compression.FileSystem.dll"
+#r @"Newtonsoft.Json\lib\net45\Newtonsoft.Json.dll"
+
+#load @"AdditionalSources.fsx"
+#load @"AssemblyResources.fsx"
+#load @"Targets.fsx"
+
+namespace Aardvark.Fake
 
 module DefaultSetup =
     open Fake
@@ -264,4 +278,4 @@ module DefaultSetup =
         "DeployToHobel" ==> "Push" |> ignore
 
         "Compile" ==> "AddNativeResources" ==> "Default" |> ignore
-    
+*)
