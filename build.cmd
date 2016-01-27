@@ -13,12 +13,12 @@ IF exist boot.fsx (
         echo skipping FAKE download 
     ) ELSE ( 
         echo downloading FAKE
-        "bin\nuget.exe" "install" "FAKE" "-Version" "3.35.2" "-OutputDirectory" "Packages" "-ExcludeVersion"
+        "bin\nuget.exe" "install" "FAKE" "-Version" "4.17.1" "-OutputDirectory" "Packages" "-ExcludeVersion"
         "bin\nuget.exe" "install" "Aardvark.Build" "-OutputDirectory" "Packages" "-ExcludeVersion"
         "bin\nuget.exe" "install" "FSharp.Formatting.CommandTool" "-OutputDirectory" "Packages" "-ExcludeVersion"
         "bin\nuget.exe" "install" "SourceLink.Fake" "-OutputDirectory" "Packages" "-ExcludeVersion"
         "bin\nuget.exe" "install" "NUnit.Runners" "-OutputDirectory" "Packages" "-ExcludeVersion"
-        "bin\nuget.exe" "install" "Paket.Core" "-Version" "1.18.5" "-OutputDirectory" "packages" "-ExcludeVersion" 
+        "bin\nuget.exe" "install" "Paket.Core" "-Version" "2.47.3" "-OutputDirectory" "packages" "-ExcludeVersion" 
     )
 
     SET TARGET=Default
@@ -31,6 +31,6 @@ IF exist boot.fsx (
     SET args=!t!
     del tmp
 
-    "packages\FAKE\tools\Fake.exe" "build.fsx" "target=%TARGET%" %args
+    "packages\FAKE\tools\Fake.exe" "build.fsx" "%TARGET%" --nocache
 )
 

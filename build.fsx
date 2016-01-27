@@ -4,6 +4,7 @@
 #I @"packages/Paket.Core/lib/net45"
 #r @"System.Xml.Linq"
 #r @"FakeLib.dll"
+#r @"Packages\Chessie\lib\net40\Chessie.dll"
 #r @"Aardvark.Build.dll"
 #r @"Mono.Cecil.dll"
 #r @"Paket.Core.dll"
@@ -26,7 +27,7 @@ let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-
 let core = ["src/Aardvark.Fake.sln"];
 
 Target "Install" (fun () ->
-    AdditionalSources.paketDependencies.Install(false, false, false, true)
+    AdditionalSources.paketDependencies.Install(false, false)
     AdditionalSources.installSources ()
 )
 
@@ -34,7 +35,7 @@ Target "Restore" (fun () ->
     if File.Exists "paket.lock" then
         AdditionalSources.paketDependencies.Restore()
     else
-        AdditionalSources.paketDependencies.Install(false, false, false, true)
+        AdditionalSources.paketDependencies.Install(false, false)
         
     AdditionalSources.installSources ()
 )
@@ -200,7 +201,9 @@ Target "Default" (fun () -> ())
 Target "Merge" (fun () ->
     let f (p : Fake.ILMergeHelper.ILMergeParams) =
         { p with 
-            Libraries = ["bin/Release/Mono.Cecil.dll"; "bin/Release/Mono.Cecil.Mdb.dll"; "bin/Release/Mono.Cecil.Pdb.dll"; "bin/Release/Mono.Cecil.Rocks.dll"] //!!"bin/Release/*.dll" -- "bin/Release/Aardvark.Fake.dll" -- "bin/Release/FakeLib.dll"  -- "bin/Release/Paket.Core.dll" -- "bin/Release/FSharp.Core.dll"
+            Libraries = ["bin/Release/Mono.Cecil.dll"; "bin/Release/Mono.Cecil.Mdb.dll"; "bin/Release/Mono.Cecil.Pdb.dll"; 
+                         "bin/Release/Mono.Cecil.Rocks.dll"
+                         ] //!!"bin/Release/*.dll" -- "bin/Release/Aardvark.Fake.dll" -- "bin/Release/FakeLib.dll"  -- "bin/Release/Paket.Core.dll" -- "bin/Release/FSharp.Core.dll"
             AllowDuplicateTypes = AllPublicTypes
         } //["bin/Mono.Cecil.dll"; "bin/Mono.Cecil.Mdb.dll"; "bin/Mono.Cecil.Pdb.dll"; "bin/Mono.Cecil.Rocks.dll"; "bin/FakeLib.dll"; "bin/Paket.Core.dll"; "bin/ICSharpCode.SharpZipLib.dll"] }
 

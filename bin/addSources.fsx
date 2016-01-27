@@ -1,12 +1,14 @@
 #if INTERACTIVE
 #I @"../packages/FAKE/tools/"
 #I @"../packages/Paket.Core/lib/net45"
+#r @"..\Packages\Chessie\lib\net40\Chessie.dll"
 #r @"Paket.Core.dll"
 #r @"FakeLib.dll"
 //do System.Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 namespace AdditionalSources
 #else
-#endif
+#endif 
+  
 
 open System.IO
 open System
@@ -190,7 +192,7 @@ module AdditionalSources =
                     |> Map.ofSeq
 
         let sourcePackages = sourceLines |> List.map (fun f -> f, buildSourceFolder f) |> Map.ofList
-        let installedPackages = paketDependencies.GetInstalledPackages() |> List.map fst |> Set.ofList
+        let installedPackages = paketDependencies.GetInstalledPackages() |> List.map (fun (a,_,_) -> a) |> Set.ofList
 
 
         for (source, packages) in Map.toSeq sourcePackages do

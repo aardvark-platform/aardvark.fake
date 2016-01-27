@@ -64,6 +64,9 @@
   </Target>
   -->
   <ItemGroup>
+    <Reference Include="Chessie">
+      <HintPath>..\..\Packages\Chessie\lib\net40\Chessie.dll</HintPath>
+    </Reference>
     <Reference Include="FakeLib">
       <HintPath>..\..\Packages\FAKE\tools\FakeLib.dll</HintPath>
     </Reference>

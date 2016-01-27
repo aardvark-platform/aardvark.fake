@@ -19,7 +19,7 @@ module DefaultTargets =
         let core = solutionNames
 
         Target "Install" (fun () ->
-            AdditionalSources.paketDependencies.Install(false, false, false, true)
+            AdditionalSources.paketDependencies.Install(false, false)
             AdditionalSources.installSources ()
         )
 
@@ -27,7 +27,7 @@ module DefaultTargets =
             if File.Exists "paket.lock" then
                 AdditionalSources.paketDependencies.Restore()
             else
-                AdditionalSources.paketDependencies.Install(false, false, false, true)
+                AdditionalSources.paketDependencies.Install(false, false)
         
             AdditionalSources.installSources ()
         )
