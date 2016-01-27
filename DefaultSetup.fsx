@@ -1,4 +1,3 @@
-﻿do printfn "%A" __SOURCE_DIRECTORY__
 #I @"..\..\..\..\packages\build"
 #r @"FAKE\tools\FakeLib.dll"
 #r @"Chessie\lib\net40\Chessie.dll"
