@@ -201,8 +201,10 @@ Target "Default" (fun () -> ())
 Target "Merge" (fun () ->
     let f (p : Fake.ILMergeHelper.ILMergeParams) =
         { p with 
-            Libraries = ["bin/Release/Mono.Cecil.dll"; "bin/Release/Mono.Cecil.Mdb.dll"; "bin/Release/Mono.Cecil.Pdb.dll"; 
-                         "bin/Release/Mono.Cecil.Rocks.dll"
+            Libraries = [ "bin/Release/Mono.Cecil.dll"; "bin/Release/Mono.Cecil.Mdb.dll"; "bin/Release/Mono.Cecil.Pdb.dll"; 
+                          "bin/Release/Mono.Cecil.Rocks.dll"; "bin/Release/Paket.Core.dll"; "bin/Release/Newtonsoft.Json.dll"; 
+                          "bin/Release/FakeLib.dll"; 
+                          "bin/Release/Chessie.dll"; 
                          ] //!!"bin/Release/*.dll" -- "bin/Release/Aardvark.Fake.dll" -- "bin/Release/FakeLib.dll"  -- "bin/Release/Paket.Core.dll" -- "bin/Release/FSharp.Core.dll"
             AllowDuplicateTypes = AllPublicTypes
         } //["bin/Mono.Cecil.dll"; "bin/Mono.Cecil.Mdb.dll"; "bin/Mono.Cecil.Pdb.dll"; "bin/Mono.Cecil.Rocks.dll"; "bin/FakeLib.dll"; "bin/Paket.Core.dll"; "bin/ICSharpCode.SharpZipLib.dll"] }
