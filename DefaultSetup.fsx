@@ -1,11 +1,7 @@
+#nowarn "211"
 #I @"..\..\..\..\packages\build"
+#I @"packages"
 #r @"FAKE\tools\FakeLib.dll"
-#r @"Chessie\lib\net40\Chessie.dll"
-#r @"Paket.Core\lib\net45\Paket.Core.dll"
-#r @"Mono.Cecil\lib\net45\Mono.Cecil.dll"
-#r "System.IO.Compression.dll"
-#r "System.IO.Compression.FileSystem.dll"
-#r @"Newtonsoft.Json\lib\net45\Newtonsoft.Json.dll"
 #r @"FAKE\tools\Argu.dll"
 
 #load @"AdditionalSources.fsx"

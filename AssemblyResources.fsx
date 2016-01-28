@@ -1,4 +1,14 @@
-﻿namespace Aardvark.Fake
+﻿#nowarn "211"
+#I @"..\..\..\..\packages\build"
+#I @"packages"
+#r @"FAKE\tools\FakeLib.dll"
+#r @"Paket.Core\lib\net45\Paket.Core.dll"
+#r @"Mono.Cecil\lib\net45\Mono.Cecil.dll"
+#r @"Chessie\lib\net40\Chessie.dll"
+#r @"System.IO.Compression.dll"
+#r @"System.IO.Compression.FileSystem.dll"
+
+namespace Aardvark.Fake
 
 open System
 open System.Reflection

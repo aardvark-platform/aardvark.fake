@@ -1,6 +1,6 @@
 source http://nuget.org/api/v2
 
-nuget FAKE
-nuget Paket.Core
-nuget SourceLink.Fake
-nuget Mono.Cecil ~> 0.9.6.1
+nuget FAKE             ~> 4.17.0
+nuget Paket.Core       ~> 2.48.0
+nuget SourceLink.Fake  ~> 1.1.0
+nuget Mono.Cecil       ~> 0.9.6.1
