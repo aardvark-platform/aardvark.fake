@@ -1,0 +1,11 @@
+NUGET
+  remote: http://www.nuget.org/api/v2
+  specs:
+    FAKE (4.17.1)
+    FSharp.Core (4.0.0.1)
+    Mono.Cecil (0.9.6.1)
+    Newtonsoft.Json (8.0.2)
+    Paket.Core (1.18.5)
+      FSharp.Core
+      Newtonsoft.Json
+    SourceLink.Fake (1.1.0)
