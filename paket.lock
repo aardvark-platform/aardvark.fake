@@ -5,7 +5,7 @@ NUGET
       FSharp.Core
     FAKE (4.17.1)
     FSharp.Core (4.0.0.1)
-    Mono.Cecil (0.9.6.1)
+    Mono.Cecil (0.9.5.4)
     Newtonsoft.Json (8.0.2)
     Paket.Core (2.48.0)
       Chessie
