@@ -1,8 +1,8 @@
-#nowarn "211"
 #I @"..\..\..\..\packages\build"
 #I @"packages"
 #r @"FAKE\tools\FakeLib.dll"
 #r @"FAKE\tools\Argu.dll"
+#r @"Chessie\lib\net40\Chessie.dll"
 
 #load @"AdditionalSources.fsx"
 #load @"AssemblyResources.fsx"

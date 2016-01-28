@@ -2,8 +2,8 @@
 #I @"..\..\..\..\packages\build"
 #I @"packages"
 #r @"FAKE\tools\FakeLib.dll"
-#r @"Paket.Core\lib\net45\Paket.Core.dll"
 #r @"Chessie\lib\net40\Chessie.dll"
+#r @"Paket.Core\lib\net45\Paket.Core.dll"
 #r @"System.IO.Compression.dll"
 #r @"System.IO.Compression.FileSystem.dll"
 
