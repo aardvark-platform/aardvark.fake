@@ -49,7 +49,7 @@ module Startup =
 
     let entry() =
         Environment.SetEnvironmentVariable("Platform", "Any CPU")
-        let argv = Environment.GetCommandLineArgs() |> Array.skip 2
+        let argv = Environment.GetCommandLineArgs() |> Array.skip 5 // yeah really
         try 
             let res = argParser.Parse(argv, ignoreUnrecognized = true)
             let debug = res.Contains <@ Debug @>
@@ -65,9 +65,10 @@ module Startup =
 
             config <- { debug = debug; verbose = verbose; target = target; args = args }
 
-            RunTargetOrDefault target
+            //Environment.SetEnvironmentVariable("Target", target)
+            Run target
         with e ->
-            RunTargetOrDefault "Help"
+            Run "Help"
 
 
 module DefaultSetup =
@@ -92,8 +93,14 @@ module DefaultSetup =
         )
 
         Target "Update" (fun () ->
-            AdditionalSources.paketDependencies.Update(false, false)
-            AdditionalSources.installSources ()
+             match config.args with 
+              | [] ->  
+                AdditionalSources.paketDependencies.Update(false, false)
+              | xs ->
+                let filter = xs |> List.map (sprintf "(%s)") |> String.concat "|" |> sprintf "(%s)"
+                AdditionalSources.paketDependencies.UpdateFilteredPackages(None,filter,None,false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction)
+
+             AdditionalSources.installSources ()
         )
 
         Target "AddSource" (fun () ->
@@ -116,6 +123,9 @@ module DefaultSetup =
                 MSBuildRelease "bin/Release" "Build" core |> ignore
         )
 
+        Target "UpdateBuildScript" (fun () ->
+            AdditionalSources.paketDependencies.UpdateGroup("Build",false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction)
+        )
 
         Target "CreatePackage" (fun () ->
             let releaseNotes = try Fake.Git.Information.getCurrentHash() |> Some with _ -> None
@@ -272,9 +282,11 @@ module DefaultSetup =
             printfn "      installs all packages specified in paket.dependencies and"
             printfn "      adjusts project files according to paket.references (next to the project)"
             printfn "      may also perform a new resolution when versions in paket.dependencies have changed."
-            printfn "    Update"
+            printfn "    Update [regex]"
             printfn "      searches for newer compatible version (according to paket.dependencies)"
             printfn "      and installs them if possible. this target also adjusts the project files"
+            printfn "    UpdateBuildScript"
+            printfn "      updates the build script and its dependencies."
             printfn ""
             printfn "  advanced features"
             printfn "    AddSource <folder>"
