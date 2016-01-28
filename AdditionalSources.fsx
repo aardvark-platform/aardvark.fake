@@ -56,7 +56,7 @@ module PathHelpers =
 
 module AdditionalSources =
 
-    do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"..\..\..\..\")
+    do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"../../../../")
 
     // register the logger
     Logging.event.Publish.Subscribe (fun a -> 
