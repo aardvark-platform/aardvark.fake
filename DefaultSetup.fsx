@@ -138,33 +138,7 @@ module DefaultSetup =
             AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
         )
 
-
-        Target "DeployToHobel" (fun () ->
-            let packages = !!"bin/*.nupkg"
-            let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
-            let tag = Fake.Git.Information.getLastTag()
-
-            let myPackages = 
-                packages 
-                    |> Seq.choose (fun p ->
-                        let m = packageNameRx.Match (Path.GetFileName p)
-                        if m.Success then 
-                            Some(m.Groups.["name"].Value)
-                        else
-                            None
-                    )
-                    |> Set.ofSeq
-
-            try
-                for id in myPackages do
-                    let source = sprintf "bin/%s.%s.nupkg" id tag
-                    let target = sprintf @"\\hobel.ra1.vrvis.lan\NuGet\%s.%s.nupkg" id tag
-                    File.Copy(source, target, true)
-            with e ->
-                traceError (string e)
-        )
-
-        Target "Deploy" (fun () ->
+        Target "Push" (fun () ->
             let rx = Regex @"(?<url>[^ ]+)[ \t]*(?<keyfile>[^ ]+)"
             let targets = "deploy.targets"
             let targets =
@@ -224,6 +198,37 @@ module DefaultSetup =
         )
 
 
+        Target "PushMinor" (fun () ->
+
+            let old = Fake.Git.Information.getLastTag()
+            match Version.TryParse(old) with
+             | (true,v) ->
+                  let newVersion = Version(v.Major,v.Minor,v.Build + 1) |> string
+                  if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
+                    tracefn "created tag %A" newVersion
+            
+                    try
+                        Run "Push"
+
+                        try
+                            let tag = Fake.Git.Information.getLastTag()
+                            Fake.Git.Branches.pushTag "." "origin" newVersion
+                        with e ->
+                            traceError "failed to push tag %A to origin (please push yourself)" 
+                            raise e
+                    with e ->
+                        Fake.Git.Branches.deleteTag "." newVersion
+                        tracefn "deleted tag %A" newVersion
+                        raise e
+                  else
+                    failwithf "could not create tag: %A" newVersion
+             | _ -> 
+                failwithf "could not parse tag: %A" old
+        )
+
+        
+
+
         Target "AddNativeResources" (fun () ->
             let dir =
                if Directory.Exists "libs/Native" then Some "libs/Native"
@@ -269,8 +274,7 @@ module DefaultSetup =
             printfn "      git tag as version (note that the tag needs to have a comment)."
             printfn "      the resulting packages are stored in bin/*.nupkg"
             printfn "    Push"
-            printfn "      creates the packages and deploys them to \\\\hobel\\NuGet\\ and all other"
-            printfn "      feeds specified in deploy.targets"
+            printfn "      creates the packages and deploys them to all feeds specified in deploy.targets"
             printfn "    Restore"
             printfn "      ensures that all packages given in paket.lock are installed"
             printfn "      with their respective version."
@@ -299,8 +303,6 @@ module DefaultSetup =
 
         )
 
-
-        Target "Push" DoNothing
         Target "Default" DoNothing
 
 
@@ -309,10 +311,7 @@ module DefaultSetup =
 
         "AddNativeResources" ==> "CreatePackage" |> ignore
         "Compile" ==> "CreatePackage" |> ignore
-        "CreatePackage" ==> "Deploy" |> ignore
-        "CreatePackage" ==> "DeployToHobel" |> ignore
-
-        "Deploy" ==> "Push" |> ignore
-        "DeployToHobel" ==> "Push" |> ignore
+        "CreatePackage" ==> "Push" |> ignore
 
         "Compile" ==> "AddNativeResources" ==> "Default" |> ignore
+        "CreatePackage" ==> "PushMinor" |> ignore
