@@ -1,4 +1,3 @@
-﻿do printfn "%A" __SOURCE_DIRECTORY__
 #I @"..\..\..\..\packages\build"
 #r @"FAKE\tools\FakeLib.dll"
 #r @"Chessie\lib\net40\Chessie.dll"
@@ -7,28 +6,73 @@
 #r "System.IO.Compression.dll"
 #r "System.IO.Compression.FileSystem.dll"
 #r @"Newtonsoft.Json\lib\net45\Newtonsoft.Json.dll"
+#r @"FAKE\tools\Argu.dll"
 
 #load @"AdditionalSources.fsx"
 #load @"AssemblyResources.fsx"
-#load @"Targets.fsx"
 
 namespace Aardvark.Fake
 
+open Fake
+open System
+open System.IO
+open System.Diagnostics
+open System.Text.RegularExpressions
+open Aardvark.Fake
+open Argu
+
+
+[<AutoOpen>]
+module Startup =
+
+    type private Arguments =
+        | Debug
+        | Verbose
+
+        interface IArgParserTemplate with
+            member s.Usage =
+                match s with
+                    | Debug -> "debug build"
+                    | Verbose -> "verbose mode"
+
+    let private argParser = ArgumentParser.Create<Arguments>()
+
+    type Config =
+        {
+            debug : bool
+            verbose : bool
+            target : string
+            args : list<string>
+        }
+
+    let mutable config = { debug = false; verbose = false; target = "Default"; args = [] }
+
+    let entry() =
+        Environment.SetEnvironmentVariable("Platform", "Any CPU")
+        let argv = Environment.GetCommandLineArgs() |> Array.skip 2
+        try 
+            let res = argParser.Parse(argv, ignoreUnrecognized = true)
+            let debug = res.Contains <@ Debug @>
+            let verbose = res.Contains <@ Verbose @>
+            let argv = argv |> Array.filter (fun str -> not (str.StartsWith "-")) |> Array.toList
+
+            let target, args =
+                match argv with
+                    | [] -> "Default", []
+                    | t::rest -> t, rest
+
+            Paket.Logging.verbose <- verbose
+
+            config <- { debug = debug; verbose = verbose; target = target; args = args }
+
+            RunTargetOrDefault target
+        with e ->
+            RunTargetOrDefault "Help"
+
+
 module DefaultSetup =
-    open Fake
-    open System
-    open System.IO
-    open System.Diagnostics
-    open System.Text.RegularExpressions
-    open Aardvark.Fake
-
-
+    
     let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
-
-    let debugBuild =
-        match environVarOrNone "Configuration" with
-            | Some c when c.Trim().ToLower() = "debug" -> true
-            | _ -> false
 
     let install(solutionNames : seq<string>) = 
         let core = solutionNames
@@ -53,25 +97,11 @@ module DefaultSetup =
         )
 
         Target "AddSource" (fun () ->
-            let args = Environment.GetCommandLineArgs()
-            let folders =
-                if args.Length > 3 then
-                    Array.skip 3 args
-                else
-                    failwith "no source folder given"
-
-            AdditionalSources.addSources (Array.toList folders)
+            AdditionalSources.addSources config.args 
         )
 
         Target "RemoveSource" (fun () ->
-            let args = Environment.GetCommandLineArgs()
-            let folders =
-                if args.Length > 3 then
-                    Array.skip 3 args
-                else
-                    failwith "no source folder given"
-
-            AdditionalSources.removeSources (Array.toList folders)
+            AdditionalSources.removeSources config.args 
         )
 
         Target "Clean" (fun () ->
@@ -80,7 +110,7 @@ module DefaultSetup =
         )
 
         Target "Compile" (fun () ->
-            if debugBuild then
+            if config.debug then
                 MSBuildDebug "bin/Release" "Build" core |> ignore
             else
                 MSBuildRelease "bin/Release" "Build" core |> ignore
@@ -99,7 +129,7 @@ module DefaultSetup =
             let branch = try Fake.Git.Information.getBranchName "." with e -> "master"
 
             let tag = Fake.Git.Information.getLastTag()
-            AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes)
+            AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
         )
 
 
@@ -278,4 +308,3 @@ module DefaultSetup =
         "DeployToHobel" ==> "Push" |> ignore
 
         "Compile" ==> "AddNativeResources" ==> "Default" |> ignore
-*)

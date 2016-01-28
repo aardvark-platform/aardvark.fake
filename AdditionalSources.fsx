@@ -46,6 +46,8 @@ module PathHelpers =
 
 module AdditionalSources =
 
+    do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"..\..\..\..\")
+
     // register the logger
     Logging.event.Publish.Subscribe (fun a -> 
         match a.Level with
@@ -73,7 +75,7 @@ module AdditionalSources =
     // since autorestore might overwrite our source-dependencies we simply turn it off
     let paketDependencies = Paket.Dependencies.Locate(Environment.CurrentDirectory)
     do paketDependencies.TurnOffAutoRestore()
-
+    
     // read a package id and version from a paket.template file
     let tryReadPackageIdAndVersion (file : string) =
         let lines = file |> File.ReadAllLines
@@ -149,7 +151,7 @@ module AdditionalSources =
             else
                 Map.empty |> ref
 
-        let buildSourceFolder (folder : string) (config : string) : Map<string, Version> =
+        let buildSourceFolder (folder : string) (debug : bool) : Map<string, Version> =
             let cacheTime =
                 match Map.tryFind folder !cacheTimes with
                     | Some t -> t
@@ -159,7 +161,7 @@ module AdditionalSources =
 
             let code = 
                 if modTime > cacheTime then
-                    shellExec { CommandLine = sprintf "/C build.cmd CreatePackage Configuration=%s" config; 
+                    shellExec { CommandLine = sprintf "/C build.cmd CreatePackage %s" (if debug then "--debug Configuration=Debug" else ""); 
                                 Program = "cmd.exe"; WorkingDirectory = folder; Args = [] }
                 else
                     0
@@ -186,8 +188,8 @@ module AdditionalSources =
             sourceLines 
                 |> List.map (fun line -> 
                         match line.Split(';') with
-                         | [|source|] -> source, buildSourceFolder source "Debug"
-                         | [|source;config|] -> source, buildSourceFolder source config
+                         | [|source|] -> source, buildSourceFolder source true
+                         | [|source;config|] -> source, buildSourceFolder source (if config.ToLower() = "debug" then true else false)
                          | _ -> failwithf "could not parse source dependency line (sources.lock): %s" line
                     ) 
                 |> Map.ofList
