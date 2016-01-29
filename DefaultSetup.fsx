@@ -227,7 +227,33 @@ module DefaultSetup =
         )
 
         
+        Target "PushMajor" (fun () ->
 
+            let old = Fake.Git.Information.getLastTag()
+            match Version.TryParse(old) with
+             | (true,v) ->
+                  let newVersion = Version(v.Major,v.Minor + 1,0) |> string
+                  if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
+                    tracefn "created tag %A" newVersion
+            
+                    try
+                        Run "Push"
+
+                        try
+                            let tag = Fake.Git.Information.getLastTag()
+                            Fake.Git.Branches.pushTag "." "origin" newVersion
+                        with e ->
+                            traceError "failed to push tag %A to origin (please push yourself)" 
+                            raise e
+                    with e ->
+                        Fake.Git.Branches.deleteTag "." newVersion
+                        tracefn "deleted tag %A" newVersion
+                        raise e
+                  else
+                    failwithf "could not create tag: %A" newVersion
+             | _ -> 
+                failwithf "could not parse tag: %A" old
+        )
 
         Target "AddNativeResources" (fun () ->
             let dir =
@@ -315,3 +341,4 @@ module DefaultSetup =
 
         "Compile" ==> "AddNativeResources" ==> "Default" |> ignore
         "CreatePackage" ==> "PushMinor" |> ignore
+        "CreatePackage" ==> "PushMajor" |> ignore
