@@ -1,4 +1,4 @@
-source http://nuget.org/api/v2
+source https://nuget.org/api/v2
 
 nuget FAKE             ~> 4.17.0
 nuget Paket.Core       ~> 2.48.0
