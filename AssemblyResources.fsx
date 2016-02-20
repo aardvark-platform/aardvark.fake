@@ -35,34 +35,47 @@ module AssemblyResources =
             let p = Path.Combine(path, Path.GetFileName d)
             addFolderToArchive p d archive
 
+    let useDir d f =
+        let old = System.Environment.CurrentDirectory
+        System.Environment.CurrentDirectory <- d
+        let r = f ()
+        System.Environment.CurrentDirectory <- old
+        r
+
     let addFolder (folder : string) (assemblyPath : string) =
-        let symbols = File.Exists (Path.ChangeExtension(assemblyPath, "pdb"))
+        
+        useDir (Path.Combine("bin","Release")) (fun () -> 
+            let symbols = 
+                // only process symbols if they exist and we are on not on unix like systems (they use mono symbols). 
+                // this means: at the moment only windows packages support pdb debugging.
+                File.Exists (Path.ChangeExtension(assemblyPath, "pdb")) && System.Environment.OSVersion.Platform <> PlatformID.Unix
 
-        let a = AssemblyDefinition.ReadAssembly(assemblyPath,ReaderParameters(ReadSymbols=symbols))
+        
+            let a = AssemblyDefinition.ReadAssembly(assemblyPath,ReaderParameters(ReadSymbols=symbols))
 
-        let mem = new MemoryStream()
-        let archive = new ZipArchive(mem, ZipArchiveMode.Create, true)
-        addFolderToArchive "" folder archive
+            let mem = new MemoryStream()
+            let archive = new ZipArchive(mem, ZipArchiveMode.Create, true)
+            addFolderToArchive "" folder archive
 
-        // remove the old resource (if any)
-        let res = a.MainModule.Resources |> Seq.tryFind (fun r -> r.Name = "native.zip")
-        match res with
-            | Some res -> a.MainModule.Resources.Remove res |> ignore
-            | None -> ()
+            // remove the old resource (if any)
+            let res = a.MainModule.Resources |> Seq.tryFind (fun r -> r.Name = "native.zip")
+            match res with
+                | Some res -> a.MainModule.Resources.Remove res |> ignore
+                | None -> ()
 
-        // create and add the new resource
-        archive.Dispose()
-        mem.Position <- 0L
-        let data = mem.ToArray()
-        let r = EmbeddedResource("native.zip", ManifestResourceAttributes.Public, data)
+            // create and add the new resource
+            archive.Dispose()
+            mem.Position <- 0L
+            let data = mem.ToArray()
+            let r = EmbeddedResource("native.zip", ManifestResourceAttributes.Public, data)
     
-        mem.Dispose()
+            mem.Dispose()
 
-        a.MainModule.Resources.Add(r)
-        tracefn "added native resources to %A" (Path.GetFileName assemblyPath)
-        a.Write( assemblyPath, WriterParameters(WriteSymbols=symbols))
+            a.MainModule.Resources.Add(r)
+            tracefn "added native resources to %A" (Path.GetFileName assemblyPath)
+            a.Write( assemblyPath, WriterParameters(WriteSymbols=symbols))
 
-        ()
+        )
 
     let getFilesAndFolders (folder : string) =
         if Directory.Exists folder then Directory.GetFileSystemEntries folder
