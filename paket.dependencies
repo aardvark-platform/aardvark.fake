@@ -3,6 +3,6 @@ source https://api.nuget.org/v3/index.json
 
 
 nuget FAKE             ~> 4.17.0
-nuget Paket.Core       ~> 2.52.10
+nuget Paket.Core       ~> 2.60.1
 nuget SourceLink.Fake  ~> 1.1.0
 nuget Mono.Cecil       ~> 0.9.5.4

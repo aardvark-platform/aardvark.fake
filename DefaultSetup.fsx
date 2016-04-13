@@ -94,7 +94,7 @@ module DefaultSetup =
                 AdditionalSources.paketDependencies.Update(false, false)
               | xs ->
                 let filter = xs |> List.map (sprintf "(%s)") |> String.concat "|" |> sprintf "(%s)"
-                AdditionalSources.paketDependencies.UpdateFilteredPackages(None,filter,None,false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction)
+                AdditionalSources.paketDependencies.UpdateFilteredPackages(Some "Main",filter,None,false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
 
              AdditionalSources.installSources ()
         )
@@ -120,7 +120,7 @@ module DefaultSetup =
         )
 
         Target "UpdateBuildScript" (fun () ->
-            AdditionalSources.paketDependencies.UpdateGroup("Build",false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction)
+            AdditionalSources.paketDependencies.UpdateGroup("Build",false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
         )
 
         Target "CreatePackage" (fun () ->
