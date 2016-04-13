@@ -171,13 +171,12 @@ module AdditionalSources =
 
             let code = 
                 if modTime > cacheTime then
-                    let buildScript = 
-                        if System.Environment.OSVersion.Platform = System.PlatformID.Unix then
-                            "./build.sh"
-                        else "build.cmd"
-
-                    shellExec { CommandLine = sprintf "/C %s CreatePackage %s" buildScript (if debug then "--debug Configuration=Debug" else ""); 
-                                Program = "cmd.exe"; WorkingDirectory = folder; Args = [] }
+                    if System.Environment.OSVersion.Platform = System.PlatformID.Unix then
+                        shellExec { CommandLine = sprintf "-c \"%s CreatePackage %s\"" "./build.sh" (if debug then "--debug Configuration=Debug" else ""); 
+                                    Program = "/bin/bash"; WorkingDirectory = folder; Args = [] }
+                    else
+                        shellExec { CommandLine = sprintf "/C %s CreatePackage %s" "build.cmd" (if debug then "--debug Configuration=Debug" else ""); 
+                                    Program = "cmd.exe"; WorkingDirectory = folder; Args = [] }
                 else
                     0
 
