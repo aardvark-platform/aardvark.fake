@@ -186,13 +186,13 @@ module DefaultSetup =
                 let tag = Fake.Git.Information.getLastTag()
                 match accessKey with
                     | Some accessKey ->
-                        for id in myPackages do
-                            try
+                        try
+                            for id in myPackages do
                                 let packageName = sprintf "bin/%s.%s.nupkg" id tag
                                 tracefn "pushing: %s" packageName
                                 Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
-                            with e ->
-                                traceError (string e)
+                        with e ->
+                            traceError (string e)
                     | None ->
                         traceError (sprintf "Could not find nuget access key")
         )
