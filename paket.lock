@@ -3,11 +3,11 @@ NUGET
   specs:
     Chessie (0.5.1)
       FSharp.Core
-    FAKE (4.17.1)
+    FAKE (4.27)
     FSharp.Core (4.0.0.1)
-    Mono.Cecil (0.9.5.4)
+    Mono.Cecil (0.9.6.1)
     Newtonsoft.Json (8.0.3)
-    Paket.Core (2.60.1)
+    Paket.Core (2.66.2)
       Chessie
       FSharp.Core
       Newtonsoft.Json
