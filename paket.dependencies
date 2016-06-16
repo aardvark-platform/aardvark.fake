@@ -2,7 +2,7 @@ source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 
 
-nuget FAKE             
-nuget Paket.Core       
+nuget FAKE             < 5.0
+nuget Paket.Core       < 4.0.0
 nuget SourceLink.Fake  
-nuget Mono.Cecil       
+nuget Mono.Cecil       <= 0.9.5.4
