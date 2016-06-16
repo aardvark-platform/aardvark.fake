@@ -75,7 +75,7 @@ module DefaultSetup =
         let core = solutionNames
 
         Target "Install" (fun () ->
-            AdditionalSources.paketDependencies.Install(false, false)
+            AdditionalSources.paketDependencies.Install(false)
             AdditionalSources.installSources ()
         )
 
@@ -83,7 +83,7 @@ module DefaultSetup =
             if File.Exists "paket.lock" then
                 AdditionalSources.paketDependencies.Restore()
             else
-                AdditionalSources.paketDependencies.Install(false, false)
+                AdditionalSources.paketDependencies.Install(false)
         
             AdditionalSources.installSources ()
         )
@@ -91,7 +91,7 @@ module DefaultSetup =
         Target "Update" (fun () ->
              match config.args with 
               | [] ->  
-                AdditionalSources.paketDependencies.Update(false, false)
+                AdditionalSources.paketDependencies.Update(false)
               | xs ->
                 let filter = xs |> List.map (sprintf "(%s)") |> String.concat "|" |> sprintf "(%s)"
                 AdditionalSources.paketDependencies.UpdateFilteredPackages(Some "Main",filter,None,false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
