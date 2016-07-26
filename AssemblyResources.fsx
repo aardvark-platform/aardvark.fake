@@ -84,6 +84,8 @@ module AssemblyResources =
     let copyDependencies (folder : string) (targets : seq<string>) =
         let arch = 
             "AMD64" // developer machines are assumed to be 64 bit machines
+            
+        let targets = targets |> Seq.toArray
 
         let platform =
             match Environment.OSVersion.Platform with
