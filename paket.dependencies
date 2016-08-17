@@ -3,6 +3,7 @@ source https://api.nuget.org/v3/index.json
 
 
 nuget FAKE             < 5.0
+nuget Chessie          ~> 0.5
 nuget Paket.Core       < 4.0.0
 nuget SourceLink.Fake  
 nuget Mono.Cecil       <= 0.9.5.4
