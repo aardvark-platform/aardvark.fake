@@ -27,6 +27,7 @@ module AssemblyResources =
     let rec addFolderToArchive (path : string) (folder : string) (archive : ZipArchive) =
         let files = Directory.GetFiles(folder)
         for f in files do
+            printfn "adding file: %A" f
             let e = archive.CreateEntryFromFile(f, Path.Combine(path, Path.GetFileName f))
             ()
 
@@ -52,24 +53,32 @@ module AssemblyResources =
 
         
             let a = AssemblyDefinition.ReadAssembly(assemblyPath,ReaderParameters(ReadSymbols=symbols))
-
-            let mem = new MemoryStream()
-            let archive = new ZipArchive(mem, ZipArchiveMode.Create, true)
-            addFolderToArchive "" folder archive
-
             // remove the old resource (if any)
             let res = a.MainModule.Resources |> Seq.tryFind (fun r -> r.Name = "native.zip")
             match res with
                 | Some res -> a.MainModule.Resources.Remove res |> ignore
                 | None -> ()
 
-            // create and add the new resource
-            archive.Dispose()
-            mem.Position <- 0L
-            let data = mem.ToArray()
+            let temp = System.IO.Path.GetTempFileName()
+            let data =
+                try
+                    let mem = File.Open(temp,FileMode.Open)
+                    let archive = new ZipArchive(mem, ZipArchiveMode.Create, true)
+                    addFolderToArchive "" folder archive
+
+                    // create and add the new resource
+                    archive.Dispose()
+                    mem.Close()
+                    tracefn "archive size: %d bytes" (FileInfo(temp).Length)
+                    let b = File.ReadAllBytes(temp) //mem.ToArray()
+                    tracefn "archived native dependencies with size: %d bytes" b.Length
+                    b
+                finally
+                    File.Delete(temp)
+
+
             let r = EmbeddedResource("native.zip", ManifestResourceAttributes.Public, data)
     
-            mem.Dispose()
 
             a.MainModule.Resources.Add(r)
             tracefn "added native resources to %A" (Path.GetFileName assemblyPath)
