@@ -6,15 +6,17 @@ Most importantly, AdditionalSources.fsx provides functionality ``cabal add-sourc
 
 in out packages we typically use a paket.dependencies config as such:
 
-``group Build
+```group Build
 content: none
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 
-github vrvis/Aardvark.Fake:standalone ``
+github vrvis/Aardvark.Fake:standalone 
+```
 
 while the build script might look like (DefaultSetup is the main entry script):
-``
+
+```
 #load @"paket-files/build/vrvis/Aardvark.Fake/DefaultSetup.fsx"
 
 open Fake
@@ -24,7 +26,7 @@ open Fake.Testing
 do Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
 DefaultSetup.install ["src/Aardvark.sln"]
-``
+```
 
 [1]: http://fsharp.github.io/FAKE/
 [2]: https://github.com/fsprojects/Paket
