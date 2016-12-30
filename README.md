@@ -6,7 +6,8 @@ Most importantly, AdditionalSources.fsx provides functionality ``cabal add-sourc
 
 in out packages we typically use a paket.dependencies config as such:
 
-```group Build
+```
+group Build
 content: none
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
