@@ -68,7 +68,11 @@ Thus, when used that way, the build script provides the following commands (copi
      Furthermore these source packages \"survive\" Install/Update/Restore and
      are rebuilt (upon restore/install/update) when files are modified in the source folder
    RemoveSource <folder>
+     removes the repository located in <folder> from the source dependencies and restores
+     the original version from its respective package source.
 ```
+
+[aardvark.base's scripts](https://github.com/vrvis/aardvark.base/blob/master/build.cmd) demonstrates how we use the build script from cmd/bash.
 
 [1]: http://fsharp.github.io/FAKE/
 [2]: https://github.com/fsprojects/Paket
