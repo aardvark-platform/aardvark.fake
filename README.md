@@ -29,10 +29,9 @@ do Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 DefaultSetup.install ["src/Aardvark.sln"]
 ```
 
-Thus, when used that way, the build script provides the following commands:
+Thus, when used that way, the build script provides the following commands (copied from usage section in DefaultSetup.fsx):
 
 ```
-As a result, the build script provides the following commands:
   syntax: build [Target] where target is one of the following
     Default (which is executed when no target is given)
       same like compile but also copying native dependencies (from libs/Native/PROJECTNAME)
