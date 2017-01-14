@@ -233,7 +233,7 @@ module AdditionalSources =
                 traceImportant "no sources found"
             | folders ->
                 let taskName = sprintf "adding sources: %A" folders
-                traceStartTask taskName taskName
+                use t = traceStartTaskUsing taskName taskName
 
                 traceVerbose "reading sources.lock"
                 let sourceFolders =
@@ -252,8 +252,6 @@ module AdditionalSources =
                 with e -> traceError (sprintf "failed to restore packages: %A" e.Message)
 
                 installSources()
-
-                traceEndTask taskName taskName
 
     // remove source dependencies
     let removeSources (folders : list<string>) =
