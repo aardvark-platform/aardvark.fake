@@ -153,7 +153,7 @@ module DefaultSetup =
                                 None
                         )
                 else
-                    [||]
+                    failwithf "deploy.targets file not found thus we cannot push (deploy.target specifies where to push. e.g. the content https://api.nuget.org/v3/ public.key tells the push command to push to https://api.nuget.org/v3/ with API key taken from ~./ssh/public.key)" 
 
             for (target, keyName) in targets do
 
