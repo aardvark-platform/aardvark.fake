@@ -233,8 +233,7 @@ module AdditionalSources =
                 traceImportant "no sources found"
             | folders ->
                 let taskName = sprintf "adding sources: %A" folders
-                use t = traceStartTaskUsing taskName taskName
-
+          
                 traceVerbose "reading sources.lock"
                 let sourceFolders =
                     if File.Exists sourcesFileName then 

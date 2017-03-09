@@ -1,9 +1,10 @@
+framework: net45
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 
 
-nuget FAKE             < 5.0
-nuget Chessie          ~> 0.5.0
-nuget Paket.Core       < 4.0.0
-nuget SourceLink.Fake  
-nuget Mono.Cecil       <= 0.9.5.4
+nuget FAKE             ~> 4.52.0
+nuget Chessie          ~> 0.6.0
+nuget Paket.Core       ~> 3.36.1
+nuget SourceLink.Fake  ~> 1.1.0
+nuget Mono.Cecil       
