@@ -74,6 +74,17 @@ module DefaultSetup =
     let install(solutionNames : seq<string>) = 
         let core = solutionNames
 
+        let vsVersion =
+            match MSBuildHelper.MSBuildDefaults.Properties |> List.tryPick (fun (n,v) -> if n = "VisualStudioVersion" then Some v else None) with
+                | Some vsVersion -> vsVersion
+                | None -> 
+                    let versionRx = System.Text.RegularExpressions.Regex @"\\(?<version>[0-9]+\.[0-9]+)\\bin\\msbuild\.exe$"
+                    let m = versionRx.Match (MSBuildHelper.msBuildExe.ToLower())
+                    if m.Success then
+                        m.Groups.["version"].Value
+                    else
+                        failwith "could not determine Visual Studio Version"
+
         Target "Install" (fun () ->
             AdditionalSources.paketDependencies.Install(false)
             AdditionalSources.installSources ()
@@ -114,9 +125,16 @@ module DefaultSetup =
 
         Target "Compile" (fun () ->
             if config.debug then
-                MSBuildDebug "bin/Release" "Build" core |> ignore
+                MSBuild "bin/Release" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion] core |> ignore<list<string>>
+                //core |> MSBuild "bin/Release" (fun defaults ->
+                //    { defaults with
+                //        Targets = ["Build"]
+                //    }
+                //) |> ignore
+                //MSBuildDebug "bin/Release" "Build" core |> ignore
             else
-                MSBuildRelease "bin/Release" "Build" core |> ignore
+                MSBuild "bin/Release" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion] core |> ignore<list<string>>
+                //MSBuildRelease "bin/Release" "Build" core |> ignore
         )
 
         Target "UpdateBuildScript" (fun () ->
