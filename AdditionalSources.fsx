@@ -136,7 +136,12 @@ module AdditionalSources =
             
             createDir outputFolder
 
-            Unzip outputFolder pkgFile
+            // http://community.sharpdevelop.net/forums/p/1954/36951.aspx
+            //ICSharpCode.SharpZipLib.Zip.ZipConstants.DefaultCodePage <- System.Text.Encoding.Default.CodePage;
+            //System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.OEMCodePage
+            //Unzip outputFolder pkgFile
+
+            System.IO.Compression.ZipFile.ExtractToDirectory(pkgFile, outputFolder);
             File.Copy(pkgFile, Path.Combine(outputFolder, Path.GetFileName pkgFile), true)
             true
         else
