@@ -24,12 +24,16 @@ module Startup =
     type private Arguments =
         | Debug
         | Verbose
+        | X64
+        | X32
 
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
                     | Debug -> "debug build"
                     | Verbose -> "verbose mode"
+                    | X64 -> "64 bit"
+                    | X32 -> "32 bit"
 
     let private argParser = ArgumentParser.Create<Arguments>()
 
@@ -44,24 +48,31 @@ module Startup =
     let mutable config = { debug = false; verbose = false; target = "Default"; args = [] }
 
     let entry() =
-        Environment.SetEnvironmentVariable("Platform", "Any CPU")
-        let argv = Environment.GetCommandLineArgs() |> Array.skip 5 // yeah really
+
         try 
+            let argv = Environment.GetCommandLineArgs() |> Array.skip 5 // yeah really
+
             let res = argParser.Parse(argv, ignoreUnrecognized = true)
             let debug = res.Contains <@ Debug @>
             let verbose = res.Contains <@ Verbose @>
             let argv = argv |> Array.filter (fun str -> not (str.StartsWith "-")) |> Array.toList
 
+            Paket.Logging.verbose <- verbose
+            
+            let platform = 
+                if res.Contains <@ X64 @> then "x64"
+                else if res.Contains <@ X32 @> then "x32"
+                else "AnyCPU"
+
+            Environment.SetEnvironmentVariable("Platform", platform)
+            
             let target, args =
                 match argv with
                     | [] -> "Default", []
                     | t::rest -> t, rest
-
-            Paket.Logging.verbose <- verbose
-
+                    
             config <- { debug = debug; verbose = verbose; target = target; args = args }
 
-            //Environment.SetEnvironmentVariable("Target", target)
             Run target
         with e ->
             Run "Help"
