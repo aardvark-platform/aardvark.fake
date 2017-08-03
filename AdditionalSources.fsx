@@ -3,16 +3,16 @@
 #I @"packages"
 #r @"FAKE/tools/FakeLib.dll"
 #r @"Chessie/lib/net40/Chessie.dll"
-#r @"Paket.Core/lib/net45/Paket.Core.dll"
 #r @"System.IO.Compression.dll"
 #r @"System.IO.Compression.FileSystem.dll"
+//#r @"Paket.Core/lib/net45/Paket.Core.dll"
 
 namespace Aardvark.Fake
 
 open System.IO
 open System
 open System.Diagnostics
-open Paket
+//open Paket
 open Fake
 open System.Text.RegularExpressions
 open System.IO.Compression
@@ -57,16 +57,33 @@ module PathHelpers =
 module AdditionalSources =
 
     do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"../../../../")
+    
+    let shellExecutePaket args =
+// possible way to active detailed output...
+//        let args = 
+//            if verbose then
+//                String.concat " " [| args; "--verbose" |]
+//            else
+//                args
+
+        let startInfo = new ProcessStartInfo()
+        startInfo.FileName <- @"../../../../.paket/paket.exe"
+        startInfo.Arguments <- args
+        startInfo.UseShellExecute <- false
+        startInfo.CreateNoWindow <- true
+
+        let proc = Process.Start(startInfo)
+        proc.WaitForExit()
 
     // register the logger
-    Logging.event.Publish.Subscribe (fun a -> 
-        match a.Level with
-            | TraceLevel.Error -> traceError a.Text
-            | TraceLevel.Info ->  trace a.Text
-            | TraceLevel.Warning -> traceImportant a.Text
-            | TraceLevel.Verbose -> traceVerbose a.Text
-            | _ -> ()
-    ) |> ignore
+//    Logging.event.Publish.Subscribe (fun a -> 
+//        match a.Level with
+//            | TraceLevel.Error -> traceError a.Text
+//            | TraceLevel.Info ->  trace a.Text
+//            | TraceLevel.Warning -> traceImportant a.Text
+//            | TraceLevel.Verbose -> traceVerbose a.Text
+//            | _ -> ()
+//    ) |> ignore
 
     let private packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
     let private templateIdRx = Regex @"^id[ \t]+(?<id>.*)$"
@@ -83,8 +100,8 @@ module AdditionalSources =
     let private cacheFile = Path.Combine(Path.GetTempPath(), getHash Environment.CurrentDirectory)
 
     // since autorestore might overwrite our source-dependencies we simply turn it off
-    let paketDependencies = Paket.Dependencies.Locate(Environment.CurrentDirectory)
-    do paketDependencies.TurnOffAutoRestore()
+//    let paketDependencies = Paket.Dependencies.Locate(Environment.CurrentDirectory)
+//    do paketDependencies.TurnOffAutoRestore()
     
     // read a package id and version from a paket.template file
     let tryReadPackageIdAndVersion (file : string) =
@@ -213,7 +230,7 @@ module AdditionalSources =
                     ) 
                 |> Map.ofList
         printfn "source packages: %A" sourcePackages
-        let installedPackages = paketDependencies.GetInstalledPackages() |> List.map (fun (a,_,_) -> a) |> Set.ofList
+        //let installedPackages = paketDependencies.GetInstalledPackages() |> List.map (fun (a,_,_) -> a) |> Set.ofList
 
 
         for (source, packages) in Map.toSeq sourcePackages do
@@ -251,9 +268,11 @@ module AdditionalSources =
                 traceVerbose "writing to sources.lock"
                 File.WriteAllLines(sourcesFileName, newSourceFolders)
 
-                trace "restoring missing packages"
-                try paketDependencies.Restore()
-                with e -> traceError (sprintf "failed to restore packages: %A" e.Message)
+                //trace "restoring missing packages"
+                //try paketDependencies.Restore() // TODO! Trigger manually!
+                //with e -> traceError (sprintf "failed to restore packages: %A" e.Message)
+                
+                shellExecutePaket "restore"
 
                 installSources()
 
@@ -278,7 +297,8 @@ module AdditionalSources =
                 let path = Path.Combine("packages", id)
                 deleteDir path
 
+        //paketDependencies.Restore() // TODO! Trigger manually!
+        shellExecutePaket "restore"
 
-        paketDependencies.Restore()
         installSources()
 

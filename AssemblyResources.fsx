@@ -2,7 +2,6 @@
 #I @"../../../../packages/build"
 #I @"packages"
 #r @"FAKE/tools/FakeLib.dll"
-#r @"Paket.Core/lib/net45/Paket.Core.dll"
 #r @"Mono.Cecil/lib/net40/Mono.Cecil.dll"
 #r @"Mono.Cecil/lib/net40/Mono.Cecil.Pdb.dll"
 #r @"Chessie/lib/net40/Chessie.dll"

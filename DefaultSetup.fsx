@@ -57,7 +57,7 @@ module Startup =
                     | [] -> "Default", []
                     | t::rest -> t, rest
 
-            Paket.Logging.verbose <- verbose
+            //Paket.Logging.verbose <- verbose
 
             config <- { debug = debug; verbose = verbose; target = target; args = args }
 
@@ -86,15 +86,18 @@ module DefaultSetup =
                         failwith "could not determine Visual Studio Version"
 
         Target "Install" (fun () ->
-            AdditionalSources.paketDependencies.Install(false)
-            AdditionalSources.installSources ()
+            //AdditionalSources.paketDependencies.Install(false)
+            AdditionalSources.shellExecutePaket "install"
+            AdditionalSources.installSources()
         )
 
         Target "Restore" (fun () ->
             if File.Exists "paket.lock" then
-                AdditionalSources.paketDependencies.Restore()
+                //AdditionalSources.paketDependencies.Restore()
+                AdditionalSources.shellExecutePaket "restore"
             else
-                AdditionalSources.paketDependencies.Install(false)
+                //AdditionalSources.paketDependencies.Install(false)
+                AdditionalSources.shellExecutePaket "install"
         
             AdditionalSources.installSources ()
         )
@@ -102,10 +105,13 @@ module DefaultSetup =
         Target "Update" (fun () ->
              match config.args with 
               | [] ->  
-                AdditionalSources.paketDependencies.Update(false)
+                //AdditionalSources.paketDependencies.Update(false)
+                AdditionalSources.shellExecutePaket "update"
               | xs ->
                 let filter = xs |> List.map (sprintf "(%s)") |> String.concat "|" |> sprintf "(%s)"
-                AdditionalSources.paketDependencies.UpdateFilteredPackages(Some "Main",filter,None,false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
+                //AdditionalSources.paketDependencies.UpdateFilteredPackages(Some "Main",filter,None,false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
+                let command = sprintf "update --group Main --filter %s" filter;
+                AdditionalSources.shellExecutePaket command
 
              AdditionalSources.installSources ()
         )
@@ -138,7 +144,8 @@ module DefaultSetup =
         )
 
         Target "UpdateBuildScript" (fun () ->
-            AdditionalSources.paketDependencies.UpdateGroup("Build",false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
+            //AdditionalSources.paketDependencies.UpdateGroup("Build",false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
+            AdditionalSources.shellExecutePaket "update --group Build"
         )
 
         Target "CreatePackage" (fun () ->
@@ -153,7 +160,9 @@ module DefaultSetup =
             let branch = try Fake.Git.Information.getBranchName "." with e -> "master"
 
             let tag = Fake.Git.Information.getLastTag()
-            AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
+            //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
+            let command = sprintf "pack bin --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
+            AdditionalSources.shellExecutePaket command
         )
 
         Target "Push" (fun () ->
@@ -171,7 +180,7 @@ module DefaultSetup =
                                 None
                         )
                 else
-                    failwithf "deploy.targets file not found thus we cannot push (deploy.target specifies where to push. e.g. the content https://api.nuget.org/v3/ public.key tells the push command to push to https://api.nuget.org/v3/ with API key taken from ~./ssh/public.key)" 
+                    [||]
 
             for (target, keyName) in targets do
 
@@ -208,7 +217,9 @@ module DefaultSetup =
                             for id in myPackages do
                                 let packageName = sprintf "bin/%s.%s.nupkg" id tag
                                 tracefn "pushing: %s" packageName
-                                Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
+                                //Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
+                                let command = sprintf "push %s --api-key %s --url %s" packageName accessKey target
+                                AdditionalSources.shellExecutePaket command
                         with e ->
                             traceError (string e)
                     | None ->
