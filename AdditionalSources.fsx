@@ -65,9 +65,12 @@ module AdditionalSources =
 //                String.concat " " [| args; "--verbose" |]
 //            else
 //                args
+        let paketPath = @".paket/paket.exe"
+
+        if File.Exists paketPath |> not then printf ".packet\paket.exe is not available!"
 
         let startInfo = new ProcessStartInfo()
-        startInfo.FileName <- @"../../../../.paket/paket.exe"
+        startInfo.FileName <- paketPath
         startInfo.Arguments <- args
         startInfo.UseShellExecute <- false
         startInfo.CreateNoWindow <- true
