@@ -16,6 +16,16 @@ open System.IO
 open System.IO.Compression
 open Fake
 
+[<AutoOpen>]
+module PathHelpersAssembly =
+    type Path with
+        static member ChangeFilename(path : string, newName : string -> string) =
+            let dir = Path.GetDirectoryName(path)
+            let name = Path.GetFileNameWithoutExtension path
+            let ext = Path.GetExtension(path)
+            Path.Combine(dir, (newName name) + ext)
+
+
 module AssemblyResources =
     open System
     open Mono.Cecil
@@ -80,8 +90,22 @@ module AssemblyResources =
     
 
             a.MainModule.Resources.Add(r)
+
+            let pdbPath = Path.ChangeExtension(assemblyPath, ".pdb")
+            let tempPath = Path.ChangeFilename(assemblyPath, fun a -> a + "Tmp")
+            let tempPdb = Path.ChangeExtension(tempPath, ".pdb")
+
+            a.Write( tempPath, WriterParameters(WriteSymbols=symbols))
+            a.Dispose()
+
+            File.Delete assemblyPath
+            File.Move(tempPath, assemblyPath)
+
+            if File.Exists tempPdb then
+                File.Delete pdbPath
+                File.Move(tempPdb, pdbPath)
+
             tracefn "added native resources to %A" (Path.GetFileName assemblyPath)
-            a.Write( assemblyPath, WriterParameters(WriteSymbols=symbols))
 
         )
 
