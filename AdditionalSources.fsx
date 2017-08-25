@@ -83,9 +83,9 @@ module AdditionalSources =
             if args.Data <> null then
                 let defaultColor = Console.ForegroundColor
                 Console.ForegroundColor<-ConsoleColor.Red
-                printfn "%A" args.Data
+                printfn "%s" args.Data
                 Console.ForegroundColor<-defaultColor))
-        proc.OutputDataReceived.AddHandler(DataReceivedEventHandler (fun sender args -> if args.Data <> null then printfn "%A" args.Data))
+        proc.OutputDataReceived.AddHandler(DataReceivedEventHandler (fun sender args -> if args.Data <> null then printfn "%s" args.Data))
 
         proc.BeginErrorReadLine()
         proc.BeginOutputReadLine()
