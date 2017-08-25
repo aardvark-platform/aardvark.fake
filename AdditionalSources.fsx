@@ -74,8 +74,17 @@ module AdditionalSources =
         startInfo.Arguments <- args
         startInfo.UseShellExecute <- false
         startInfo.CreateNoWindow <- true
+        startInfo.RedirectStandardOutput <- true
+        startInfo.RedirectStandardError <- true
 
         let proc = Process.Start(startInfo)
+
+        proc.ErrorDataReceived.AddHandler(DataReceivedEventHandler (fun sender args -> if args.Data <> null then printfn "Error: %A" args.Data))
+        proc.OutputDataReceived.AddHandler(DataReceivedEventHandler (fun sender args -> if args.Data <> null then printfn "Output: %A" args.Data))
+
+        proc.BeginErrorReadLine()
+        proc.BeginOutputReadLine()
+        
         proc.WaitForExit()
 
     // register the logger
