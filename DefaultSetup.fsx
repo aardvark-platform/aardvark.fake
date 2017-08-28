@@ -2,7 +2,6 @@
 #I @"packages"
 #r @"FAKE/tools/FakeLib.dll"
 #r @"FAKE/tools/Argu.dll"
-#r @"Chessie/lib/net40/Chessie.dll"
 
 #load @"AdditionalSources.fsx"
 #load @"AssemblyResources.fsx"
@@ -314,44 +313,67 @@ module DefaultSetup =
         )
 
         Target "Help" (fun () ->
-
+            let defColor = Console.ForegroundColor
+            let highlightColor = ConsoleColor.Yellow
             printfn "aardvark build script"
             printfn "  syntax: build [Target] where target is one of the following"
+            Console.ForegroundColor<-highlightColor
             printfn "    Default (which is executed when no target is given)"
+            Console.ForegroundColor<-defColor
             printfn "      same like compile but also copying native dependencies (from libs/Native/PROJECTNAME)"
             printfn "      to bin/Release and injecting them as resource into the resulting dll/exe"
+            Console.ForegroundColor<-highlightColor
             printfn "    Compile"
+            Console.ForegroundColor<-defColor
             printfn "      builds the project's solution to bin/Release"
+            Console.ForegroundColor<-highlightColor
             printfn "    Clean"
+            Console.ForegroundColor<-defColor
             printfn "      deletes all output files in bin/Debug and bin/Release"
+            Console.ForegroundColor<-highlightColor
             printfn "    CreatePackage"
+            Console.ForegroundColor<-defColor
             printfn "      creates packages for all projects having a paket.template using the current"
             printfn "      git tag as version (note that the tag needs to have a comment)."
             printfn "      the resulting packages are stored in bin/*.nupkg"
+            Console.ForegroundColor<-highlightColor
             printfn "    Push"
+            Console.ForegroundColor<-defColor
             printfn "      creates the packages and deploys them to all feeds specified in deploy.targets"
+            Console.ForegroundColor<-highlightColor
             printfn "    Restore"
+            Console.ForegroundColor<-defColor
             printfn "      ensures that all packages given in paket.lock are installed"
             printfn "      with their respective version."
+            Console.ForegroundColor<-highlightColor
             printfn "    Install"
+            Console.ForegroundColor<-defColor
             printfn "      installs all packages specified in paket.dependencies and"
             printfn "      adjusts project files according to paket.references (next to the project)"
             printfn "      may also perform a new resolution when versions in paket.dependencies have changed."
+            Console.ForegroundColor<-highlightColor            
             printfn "    Update [regex]"
+            Console.ForegroundColor<-defColor
             printfn "      searches for newer compatible version (according to paket.dependencies)"
             printfn "      and installs them if possible. this target also adjusts the project files"
+            Console.ForegroundColor<-highlightColor            
             printfn "    UpdateBuildScript"
+            Console.ForegroundColor<-defColor
             printfn "      updates the build script and its dependencies."
             printfn ""
             printfn "  advanced features"
+            Console.ForegroundColor<-highlightColor
             printfn "    AddSource <folder>"
+            Console.ForegroundColor<-defColor
             printfn "      adds the repository located in <folder> as source dependecy causing all packages"
             printfn "      referenced from that repository to be overriden by a locally built variant."
             printfn "      Note that these overrides are not version-aware and will override all packages"
             printfn "      without any compatibility checks."
             printfn "      Furthermore these source packages \"survive\" Install/Update/Restore and"
             printfn "      are rebuilt (upon restore/install/update) when files are modified in the source folder"
+            Console.ForegroundColor<-highlightColor            
             printfn "    RemoveSource <folder>"
+            Console.ForegroundColor<-defColor
             printfn "      adds the repository located in <folder> from the source dependencies and restores"
             printfn "      the original version from its respective package source."
 

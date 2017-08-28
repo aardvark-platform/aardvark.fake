@@ -2,17 +2,14 @@
 #I @"../../../../packages/build"
 #I @"packages"
 #r @"FAKE/tools/FakeLib.dll"
-#r @"Chessie/lib/net40/Chessie.dll"
 #r @"System.IO.Compression.dll"
 #r @"System.IO.Compression.FileSystem.dll"
-//#r @"Paket.Core/lib/net45/Paket.Core.dll"
 
 namespace Aardvark.Fake
 
 open System.IO
 open System
 open System.Diagnostics
-//open Paket
 open Fake
 open System.Text.RegularExpressions
 open System.IO.Compression
@@ -314,7 +311,6 @@ module AdditionalSources =
                 let path = Path.Combine("packages", id)
                 deleteDir path
 
-        //paketDependencies.Restore() // TODO! Trigger manually!
         shellExecutePaket "restore"
 
         installSources()
