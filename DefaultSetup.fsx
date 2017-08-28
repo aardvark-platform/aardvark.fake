@@ -82,7 +82,8 @@ module DefaultSetup =
                     if m.Success then
                         m.Groups.["version"].Value
                     else
-                        failwith "could not determine Visual Studio Version"
+                        "15.0"
+                        //failwith "could not determine Visual Studio Version"
 
         Target "Install" (fun () ->
             //AdditionalSources.paketDependencies.Install(false)

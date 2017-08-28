@@ -1,9 +1,6 @@
 RESTRICTION: == net45
 NUGET
   remote: https://api.nuget.org/v3/index.json
-    Chessie (0.6)
-      FSharp.Core
-    FAKE (4.52)
-    FSharp.Core (4.2.2)
+    FAKE (4.63)
     Mono.Cecil (0.10.0-beta6)
     SourceLink.Fake (1.1)
