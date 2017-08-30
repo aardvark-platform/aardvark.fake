@@ -54,13 +54,29 @@ module AssemblyResources =
     let addFolder (folder : string) (assemblyPath : string) =
         
         useDir (Path.Combine("bin","Release")) (fun () -> 
+            let pdbPath = Path.ChangeExtension(assemblyPath, "pdb")
             let symbols = 
                 // only process symbols if they exist and we are on not on unix like systems (they use mono symbols). 
                 // this means: at the moment only windows packages support pdb debugging.
-                File.Exists (Path.ChangeExtension(assemblyPath, "pdb")) && System.Environment.OSVersion.Platform <> PlatformID.Unix
+                File.Exists (pdbPath) && System.Environment.OSVersion.Platform <> PlatformID.Unix
 
-        
-            let a = AssemblyDefinition.ReadAssembly(assemblyPath,ReaderParameters(ReadSymbols=symbols))
+            let bytes = new MemoryStream(File.ReadAllBytes assemblyPath)
+
+            let pdbStream =
+                if symbols then
+                    new MemoryStream(File.ReadAllBytes pdbPath)
+                else
+                    null
+
+
+            let r = ReaderParameters()
+            r.SymbolReaderProvider <- Mono.Cecil.Pdb.PdbReaderProvider()
+            r.SymbolStream <- pdbStream
+            r.ReadSymbols <- symbols
+            let a = AssemblyDefinition.ReadAssembly(bytes,r)
+
+
+            //let a = AssemblyDefinition.ReadAssembly(assemblyPath,ReaderParameters(ReadSymbols=symbols))
             // remove the old resource (if any)
             let res = a.MainModule.Resources |> Seq.tryFind (fun r -> r.Name = "native.zip")
             match res with
@@ -87,22 +103,24 @@ module AssemblyResources =
 
             let r = EmbeddedResource("native.zip", ManifestResourceAttributes.Public, data)
     
-
             a.MainModule.Resources.Add(r)
-
-            let pdbPath = Path.ChangeExtension(assemblyPath, ".pdb")
-            let tempPath = Path.ChangeFilename(assemblyPath, fun a -> a + "Tmp")
-            let tempPdb = Path.ChangeExtension(tempPath, ".pdb")
-
-            a.Write( tempPath, WriterParameters(WriteSymbols=symbols))
+            a.Write(assemblyPath, WriterParameters(WriteSymbols = true))
+            //a.Write(WriterParameters(WriteSymbols=symbols))
             a.Dispose()
-
-            File.Delete assemblyPath
-            File.Move(tempPath, assemblyPath)
-
-            if File.Exists tempPdb then
-                File.Delete pdbPath
-                File.Move(tempPdb, pdbPath)
+//
+//            let pdbPath = Path.ChangeExtension(assemblyPath, ".pdb")
+//            let tempPath = Path.ChangeFilename(assemblyPath, fun a -> a + "Tmp")
+//            let tempPdb = Path.ChangeExtension(tempPath, ".pdb")
+//
+//            a.Write( tempPath, WriterParameters(WriteSymbols=symbols))
+//            a.Dispose()
+//
+//            File.Delete assemblyPath
+//            File.Move(tempPath, assemblyPath)
+//
+//            if File.Exists tempPdb then
+//                File.Delete pdbPath
+//                File.Move(tempPdb, pdbPath)
 
             tracefn "added native resources to %A" (Path.GetFileName assemblyPath)
 
