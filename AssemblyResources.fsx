@@ -70,9 +70,10 @@ module AssemblyResources =
 
 
             let r = ReaderParameters()
-            r.SymbolReaderProvider <- Mono.Cecil.Pdb.PdbReaderProvider()
-            r.SymbolStream <- pdbStream
-            r.ReadSymbols <- symbols
+            if symbols then
+                r.SymbolReaderProvider <- Mono.Cecil.Pdb.PdbReaderProvider()
+                r.SymbolStream <- pdbStream
+                r.ReadSymbols <- symbols
             let a = AssemblyDefinition.ReadAssembly(bytes,r)
 
 
@@ -104,7 +105,7 @@ module AssemblyResources =
             let r = EmbeddedResource("native.zip", ManifestResourceAttributes.Public, data)
     
             a.MainModule.Resources.Add(r)
-            a.Write(assemblyPath, WriterParameters(WriteSymbols = true))
+            a.Write(assemblyPath, WriterParameters(WriteSymbols = symbols))
             //a.Write(WriterParameters(WriteSymbols=symbols))
             a.Dispose()
 //
