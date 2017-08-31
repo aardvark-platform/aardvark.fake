@@ -66,8 +66,13 @@ module AdditionalSources =
 
         if File.Exists paketPath |> not then printf ".packet\paket.exe is not available!"
 
+        let tool, args = 
+            match System.Environment.OSVersion.Platform with
+                | PlatformID.Unix | PlatformID.MacOSX -> "mono", paketPath + " " + args
+                | _ -> paketPath, args
+
         let startInfo = new ProcessStartInfo()
-        startInfo.FileName <- paketPath
+        startInfo.FileName <- tool
         startInfo.Arguments <- args
         startInfo.UseShellExecute <- false
         startInfo.CreateNoWindow <- true
