@@ -12,13 +12,13 @@ content: none
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 
-github vrvis/Aardvark.Fake:standalone 
+github aardvark-platform/aardvark.fake:standalone 
 ```
 
 while the build script might look like (DefaultSetup is the main entry script):
 
 ```
-#load @"paket-files/build/vrvis/Aardvark.Fake/DefaultSetup.fsx"
+#load @"paket-files/build/aardvark-platform/aardvark.fake/DefaultSetup.fsx"
 
 open Fake
 open Aardvark.Fake
