@@ -46,9 +46,10 @@ module Startup =
         Environment.SetEnvironmentVariable("Platform", "Any CPU")
         let argv = Environment.GetCommandLineArgs() |> Array.skip 5 // yeah really
         try 
-            let res = argParser.Parse(argv, ignoreUnrecognized = true)
+            let res = argParser.Parse(argv, ignoreUnrecognized = true) 
             let debug = res.Contains <@ Debug @>
             let verbose = res.Contains <@ Verbose @>
+            printfn "parsed options: debug=%b, verbose=%b" debug verbose
             let argv = argv |> Array.filter (fun str -> not (str.StartsWith "-")) |> Array.toList
 
             let target, args =
@@ -317,7 +318,9 @@ module DefaultSetup =
             let defColor = Console.ForegroundColor
             let highlightColor = ConsoleColor.Yellow
             printfn "aardvark build script"
-            printfn "  syntax: build [Target] where target is one of the following"
+            printfn "  syntax: build [Target] [Options] where target is one of the following"
+            printfn "          while Options = --verbose | --debug"
+            printfn "          please note, that for reasons, debug builds are also built into bin/Release"
             Console.ForegroundColor<-highlightColor
             printfn "    Default (which is executed when no target is given)"
             Console.ForegroundColor<-defColor
