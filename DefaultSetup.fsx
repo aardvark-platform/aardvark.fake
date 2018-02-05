@@ -162,7 +162,7 @@ module DefaultSetup =
 
             let tag = Fake.Git.Information.getLastTag()
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
-            let command = sprintf "pack bin --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
+            let command = sprintf "pack bin --pin-project-references --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
             AdditionalSources.shellExecutePaket command
         )
 
