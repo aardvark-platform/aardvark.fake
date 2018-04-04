@@ -20,6 +20,16 @@ open Argu
 [<AutoOpen>]
 module Startup =
 
+    let getGitTag() =
+        let ok,msg,errors = Fake.Git.CommandHelper.runGitCommand "." "describe --abbrev=0"
+        if ok && msg.Count >= 1 then
+            let tag = msg.[0]
+            tag
+        else
+            let err = sprintf "no tag: %A" errors
+            traceError err
+            failwith err
+
     type private Arguments =
         | Debug
         | Verbose
@@ -160,7 +170,7 @@ module DefaultSetup =
             let releaseNotes = releaseNotes.Value
             let branch = try Fake.Git.Information.getBranchName "." with e -> "master"
 
-            let tag = Fake.Git.Information.getLastTag()
+            let tag = getGitTag()
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
             let command = sprintf "pack bin --pin-project-references --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
             AdditionalSources.shellExecutePaket command
@@ -211,7 +221,7 @@ module DefaultSetup =
                 let branch = Fake.Git.Information.getBranchName "."
                 let releaseNotes = Fake.Git.Information.getCurrentHash()
 
-                let tag = Fake.Git.Information.getLastTag()
+                let tag = getGitTag()
                 match accessKey with
                     | Some accessKey ->
                         try
@@ -230,7 +240,7 @@ module DefaultSetup =
 
         Target "PushMinor" (fun () ->
 
-            let old = Fake.Git.Information.getLastTag()
+            let old = getGitTag()
             match Version.TryParse(old) with
              | (true,v) ->
                   let newVersion = Version(v.Major,v.Minor,v.Build + 1) |> string
@@ -241,7 +251,7 @@ module DefaultSetup =
                         Run "Push"
 
                         try
-                            let tag = Fake.Git.Information.getLastTag()
+                            let tag = getGitTag()
                             Fake.Git.Branches.pushTag "." "origin" newVersion
                         with e ->
                             traceError "failed to push tag %A to origin (please push yourself)" 
@@ -259,7 +269,7 @@ module DefaultSetup =
         
         Target "PushMajor" (fun () ->
 
-            let old = Fake.Git.Information.getLastTag()
+            let old = getGitTag()
             match Version.TryParse(old) with
              | (true,v) ->
                   let newVersion = Version(v.Major,v.Minor + 1,0) |> string
@@ -270,7 +280,7 @@ module DefaultSetup =
                         Run "Push"
 
                         try
-                            let tag = Fake.Git.Information.getLastTag()
+                            let tag = getGitTag()
                             Fake.Git.Branches.pushTag "." "origin" newVersion
                         with e ->
                             traceError "failed to push tag %A to origin (please push yourself)" 
