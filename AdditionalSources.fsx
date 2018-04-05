@@ -55,7 +55,7 @@ module AdditionalSources =
 
     do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"../../../../")
     
-    let shellExecutePaket args =
+    let shellExecutePaket sln args =
 // possible way to active detailed output...
 //        let args = 
 //            if verbose then
@@ -93,6 +93,14 @@ module AdditionalSources =
         proc.BeginOutputReadLine()
         
         proc.WaitForExit()
+
+        match sln with
+            | Some sln ->
+                DotNetCli.Restore (fun p ->
+                    { p with Project = sln }
+                )
+            | None ->
+                ()
 
     // register the logger
 //    Logging.event.Publish.Subscribe (fun a -> 
@@ -266,7 +274,7 @@ module AdditionalSources =
         File.WriteAllLines(cacheFile, !cacheTimes |> Map.toSeq |> Seq.map (fun (a, time) -> sprintf "%s;%d" a time.Ticks))
 
     // add source-dependencies
-    let addSources (folders : list<string>) = 
+    let addSources (sln : string) (folders : list<string>) = 
         
         let folders = folders |> List.filter Directory.Exists
         match folders with
@@ -291,12 +299,12 @@ module AdditionalSources =
                 //try paketDependencies.Restore() // TODO! Trigger manually!
                 //with e -> traceError (sprintf "failed to restore packages: %A" e.Message)
                 
-                shellExecutePaket "restore"
+                shellExecutePaket (Some sln) "restore"
 
                 installSources()
 
     // remove source dependencies
-    let removeSources (folders : list<string>) =
+    let removeSources (sln : string) (folders : list<string>) =
         let sourceFolders =
             if File.Exists sourcesFileName then 
                 File.ReadAllLines sourcesFileName |> Set.ofArray
@@ -316,7 +324,7 @@ module AdditionalSources =
                 let path = Path.Combine("packages", id)
                 deleteDir path
 
-        shellExecutePaket "restore"
+        shellExecutePaket (Some sln)  "restore"
 
         installSources()
 

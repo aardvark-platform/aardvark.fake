@@ -82,7 +82,7 @@ module DefaultSetup =
     let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
 
     let install(solutionNames : seq<string>) = 
-        let core = solutionNames
+        let core = Seq.head solutionNames
 
         let vsVersion =
             match MSBuildHelper.MSBuildDefaults.Properties |> List.tryPick (fun (n,v) -> if n = "VisualStudioVersion" then Some v else None) with
@@ -98,17 +98,17 @@ module DefaultSetup =
 
         Target "Install" (fun () ->
             //AdditionalSources.paketDependencies.Install(false)
-            AdditionalSources.shellExecutePaket "install"
+            AdditionalSources.shellExecutePaket (Some core) "install"
             AdditionalSources.installSources()
         )
 
         Target "Restore" (fun () ->
             if File.Exists "paket.lock" then
                 //AdditionalSources.paketDependencies.Restore()
-                AdditionalSources.shellExecutePaket "restore"
+                AdditionalSources.shellExecutePaket (Some core) "restore"
             else
                 //AdditionalSources.paketDependencies.Install(false)
-                AdditionalSources.shellExecutePaket "install"
+                AdditionalSources.shellExecutePaket (Some core) "install"
         
             AdditionalSources.installSources ()
         )
@@ -117,22 +117,22 @@ module DefaultSetup =
              match config.args with 
               | [] ->  
                 //AdditionalSources.paketDependencies.Update(false)
-                AdditionalSources.shellExecutePaket "update"
+                AdditionalSources.shellExecutePaket (Some core) "update"
               | xs ->
                 let filter = xs |> List.map (sprintf "(%s)") |> String.concat "|" |> sprintf "(%s)"
                 //AdditionalSources.paketDependencies.UpdateFilteredPackages(Some "Main",filter,None,false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
                 let command = sprintf "update --group Main --filter %s" filter;
-                AdditionalSources.shellExecutePaket command
+                AdditionalSources.shellExecutePaket (Some core) command
 
              AdditionalSources.installSources ()
         )
 
         Target "AddSource" (fun () ->
-            AdditionalSources.addSources config.args 
+            AdditionalSources.addSources core config.args 
         )
 
         Target "RemoveSource" (fun () ->
-            AdditionalSources.removeSources config.args 
+            AdditionalSources.removeSources core config.args 
         )
 
         Target "Clean" (fun () ->
@@ -142,21 +142,26 @@ module DefaultSetup =
 
         Target "Compile" (fun () ->
             if config.debug then
-                MSBuild "bin/Release" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion] core |> ignore<list<string>>
-                //core |> MSBuild "bin/Release" (fun defaults ->
-                //    { defaults with
-                //        Targets = ["Build"]
-                //    }
-                //) |> ignore
-                //MSBuildDebug "bin/Release" "Build" core |> ignore
+                DotNetCli.Build (fun p ->
+                    { p with 
+                        WorkingDir = "src"
+                        Project = core
+                        Configuration = "Debug"
+                    }
+                )
             else
-                MSBuild "bin/Release" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion] core |> ignore<list<string>>
-                //MSBuildRelease "bin/Release" "Build" core |> ignore
+                DotNetCli.Build (fun p ->
+                    { p with 
+                        WorkingDir = "src"
+                        Project = core
+                        Configuration = "Release"
+                    }
+                )
         )
 
         Target "UpdateBuildScript" (fun () ->
             //AdditionalSources.paketDependencies.UpdateGroup("Build",false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
-            AdditionalSources.shellExecutePaket "update --group Build"
+            AdditionalSources.shellExecutePaket None "update --group Build"
         )
 
         Target "CreatePackage" (fun () ->
@@ -173,7 +178,7 @@ module DefaultSetup =
             let tag = getGitTag()
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
             let command = sprintf "pack bin --pin-project-references --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
-            AdditionalSources.shellExecutePaket command
+            AdditionalSources.shellExecutePaket None command
         )
 
         Target "Push" (fun () ->
@@ -230,7 +235,7 @@ module DefaultSetup =
                                 tracefn "pushing: %s" packageName
                                 //Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
                                 let command = sprintf "push %s --api-key %s --url %s" packageName accessKey target
-                                AdditionalSources.shellExecutePaket command
+                                AdditionalSources.shellExecutePaket None command
                         with e ->
                             traceError (string e)
                     | None ->
@@ -309,13 +314,17 @@ module DefaultSetup =
                         let d = d |> Path.GetFullPath
 
                         let paths = [
+                            Path.Combine("bin/Release/netstandard2.0", n + ".dll") |> Path.GetFullPath
+                            Path.Combine("bin/Release/netcoreapp2.0", n + ".exe") |> Path.GetFullPath
+                            Path.Combine("bin/Debug/netstandard2.0", n + ".dll") |> Path.GetFullPath
+                            Path.Combine("bin/Debug/netcoreapp2.0", n + ".exe") |> Path.GetFullPath
                             Path.Combine("bin/Release", n + ".dll") |> Path.GetFullPath
                             Path.Combine("bin/Release", n + ".exe") |> Path.GetFullPath
                             Path.Combine("bin/Debug", n + ".dll") |> Path.GetFullPath
                             Path.Combine("bin/Debug", n + ".exe") |> Path.GetFullPath
                         ]
 
-                        AssemblyResources.copyDependencies d ["bin/Release"; "bin/Debug"]
+                        AssemblyResources.copyDependencies d ["bin/Release"; "bin/Debug"; "bin/Debug/netcoreapp2.0"; "bin/Release/netcoreapp2.0"]
 
                         for p in paths do
                             if File.Exists p then
