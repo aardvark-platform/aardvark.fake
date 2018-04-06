@@ -144,7 +144,6 @@ module DefaultSetup =
             if config.debug then
                 DotNetCli.Build (fun p ->
                     { p with 
-                        WorkingDir = "src"
                         Project = core
                         Configuration = "Debug"
                     }
@@ -152,7 +151,6 @@ module DefaultSetup =
             else
                 DotNetCli.Build (fun p ->
                     { p with 
-                        WorkingDir = "src"
                         Project = core
                         Configuration = "Release"
                     }
