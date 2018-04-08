@@ -105,10 +105,10 @@ module DefaultSetup =
         Target "Restore" (fun () ->
             if File.Exists "paket.lock" then
                 //AdditionalSources.paketDependencies.Restore()
-                AdditionalSources.shellExecutePaket (Some core) "restore"
+                AdditionalSources.shellExecutePaket None "restore"
             else
                 //AdditionalSources.paketDependencies.Install(false)
-                AdditionalSources.shellExecutePaket (Some core) "install"
+                AdditionalSources.shellExecutePaket None "install"
         
             AdditionalSources.installSources ()
         )
@@ -401,7 +401,7 @@ module DefaultSetup =
         Target "Default" DoNothing
 
 
-        "Restore" ==> "Compile" |> ignore
+        //"Restore" ==> "Compile" |> ignore
         "Compile" ==> "AddNativeResources" |> ignore
 
         "AddNativeResources" ==> "CreatePackage" |> ignore
