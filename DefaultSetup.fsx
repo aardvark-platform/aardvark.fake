@@ -142,19 +142,9 @@ module DefaultSetup =
 
         Target "Compile" (fun () ->
             if config.debug then
-                DotNetCli.Build (fun p ->
-                    { p with 
-                        Project = core
-                        Configuration = "Debug"
-                    }
-                )
+                MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
             else
-                DotNetCli.Build (fun p ->
-                    { p with 
-                        Project = core
-                        Configuration = "Release"
-                    }
-                )
+                MSBuild "" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
         )
 
         Target "UpdateBuildScript" (fun () ->
@@ -176,6 +166,13 @@ module DefaultSetup =
             let tag = getGitTag()
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
             let command = sprintf "pack bin --pin-project-references --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
+            
+            let command = 
+                if config.debug then
+                    command + " --build-config Debug"
+                else
+                    command
+            
             AdditionalSources.shellExecutePaket None command
         )
 
