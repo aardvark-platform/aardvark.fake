@@ -103,13 +103,12 @@ module DefaultSetup =
         )
 
         Target "Restore" (fun () ->
-            if File.Exists "paket.lock" then
-                //AdditionalSources.paketDependencies.Restore()
-                AdditionalSources.shellExecutePaket None "restore"
-            else
+            if not (File.Exists "paket.lock") then
                 //AdditionalSources.paketDependencies.Install(false)
                 AdditionalSources.shellExecutePaket None "install"
         
+            MSBuild "" "Restore" ["VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
+            
             AdditionalSources.installSources ()
         )
 
@@ -141,10 +140,11 @@ module DefaultSetup =
         )
 
         Target "Compile" (fun () ->
+            
             if config.debug then
-                MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
+                MSBuild "" "Build" ["RestorePackages", "True"; "Configuration", "Debug"; "VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
             else
-                MSBuild "" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
+                MSBuild "" "Build" ["RestorePackages", "True"; "Configuration", "Release"; "VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
         )
 
         Target "UpdateBuildScript" (fun () ->
@@ -401,7 +401,7 @@ module DefaultSetup =
         Target "Default" DoNothing
 
 
-        //"Restore" ==> "Compile" |> ignore
+        "Restore" ==> "Compile" |> ignore
         "Compile" ==> "AddNativeResources" |> ignore
 
         "AddNativeResources" ==> "CreatePackage" |> ignore
