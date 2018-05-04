@@ -131,6 +131,17 @@ module AssemblyResources =
         if Directory.Exists folder then Directory.GetFileSystemEntries folder
         else [||]
 
+    let copy (dstFolder : string) (source : string) =
+        let f = FileInfo source
+        if f.Exists then CopyFile dstFolder source
+        else 
+            let di = DirectoryInfo source
+            if di.Exists then
+                let dst = Path.Combine(dstFolder, di.Name)
+                if Directory.Exists dst |> not then Directory.CreateDirectory dst |> ignore
+                let s = CopyRecursive source dst true 
+                ()
+
     let copyDependencies (folder : string) (targets : seq<string>) =
         let arch = 
             "AMD64" // developer machines are assumed to be 64 bit machines
@@ -145,22 +156,22 @@ module AssemblyResources =
 
         for t in targets do
             getFilesAndFolders(Path.Combine(folder, platform, arch)) 
-                |> CopyFiles t
+                |> Seq.iter (copy t)
 
             getFilesAndFolders(Path.Combine(folder, platform)) 
                 |> Array.filter (fun f -> 
                     let n = Path.GetFileName(f) 
                     n <> "x86" && n <> "AMD64"
                     )
-                |> CopyFiles t
+                |> Seq.iter (copy t)
 
             getFilesAndFolders(Path.Combine(folder, arch)) 
-                |> CopyFiles t
+                |> Seq.iter (copy t)
 
             getFilesAndFolders(folder) 
                 |> Array.filter (fun f -> 
                     let n = Path.GetFileName(f) 
                     n <> "x86" && n <> "AMD64" && n <> "windows" && n <> "linux" && n <> "mac"
                     )
-                |> CopyFiles t
+                |> Seq.iter (copy t)
 
