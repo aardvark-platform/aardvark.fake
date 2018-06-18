@@ -142,9 +142,9 @@ module DefaultSetup =
         Target "Compile" (fun () ->
             
             if config.debug then
-                MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
+                MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
             else
-                MSBuild "" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
+                MSBuild "" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
         )
 
         Target "UpdateBuildScript" (fun () ->
