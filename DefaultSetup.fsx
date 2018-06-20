@@ -33,24 +33,27 @@ module Startup =
     type private Arguments =
         | Debug
         | Verbose
+        | Symbols
 
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
                     | Debug -> "debug build"
                     | Verbose -> "verbose mode"
+                    | Symbols -> "symbols"
 
     let private argParser = ArgumentParser.Create<Arguments>()
 
     type Config =
         {
             debug : bool
+            symbols : bool
             verbose : bool
             target : string
             args : list<string>
         }
 
-    let mutable config = { debug = false; verbose = false; target = "Default"; args = [] }
+    let mutable config = { debug = false; symbols = false; verbose = false; target = "Default"; args = [] }
 
     let entry() =
         Environment.SetEnvironmentVariable("Platform", "Any CPU")
@@ -59,6 +62,8 @@ module Startup =
             let res = argParser.Parse(argv, ignoreUnrecognized = true) 
             let debug = res.Contains <@ Debug @>
             let verbose = res.Contains <@ Verbose @>
+            let symbols = res.Contains <@ Symbols @>
+
             printfn "parsed options: debug=%b, verbose=%b" debug verbose
             let argv = argv |> Array.filter (fun str -> not (str.StartsWith "-")) |> Array.toList
 
@@ -69,7 +74,7 @@ module Startup =
 
             //Paket.Logging.verbose <- verbose
 
-            config <- { debug = debug; verbose = verbose; target = target; args = args }
+            config <- { debug = debug; symbols = symbols; verbose = verbose; target = target; args = args }
 
             //Environment.SetEnvironmentVariable("Target", target)
             Run target
@@ -144,6 +149,9 @@ module DefaultSetup =
             if config.debug then
                 MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
             else
+                if config.symbols then
+                    MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
+
                 MSBuild "" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
         )
 
@@ -167,12 +175,18 @@ module DefaultSetup =
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
             let command = sprintf "pack bin --pin-project-references --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
             
+            let symbolCommand =
+                command + " --build-config Debug --symbols"
+
             let command = 
                 if config.debug then
                     command + " --build-config Debug"
                 else
                     command
             
+                
+
+            if config.symbols then AdditionalSources.shellExecutePaket None symbolCommand
             AdditionalSources.shellExecutePaket None command
         )
 
@@ -226,11 +240,14 @@ module DefaultSetup =
                     | Some accessKey ->
                         try
                             for id in myPackages do
-                                let packageName = sprintf "bin/%s.%s.nupkg" id tag
-                                tracefn "pushing: %s" packageName
-                                //Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
-                                let command = sprintf "push %s --api-key %s --url %s" packageName accessKey target
-                                AdditionalSources.shellExecutePaket None command
+                                let names =
+                                    if config.symbols then [ sprintf "bin/%s.%s.nupkg" id tag; sprintf "bin/%s.symbols.%s.nupkg" id tag]
+                                    else [ sprintf "bin/%s.%s.nupkg" id tag ]
+                                for packageName in names do
+                                    tracefn "pushing: %s" packageName
+                                    //Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
+                                    let command = sprintf "push %s --api-key %s --url %s" packageName accessKey target
+                                    AdditionalSources.shellExecutePaket None command
                         with e ->
                             traceError (string e)
                     | None ->
