@@ -241,7 +241,7 @@ module DefaultSetup =
                         try
                             for id in myPackages do
                                 let names =
-                                    if config.symbols then [ sprintf "bin/%s.%s.nupkg" id tag; sprintf "bin/%s.symbols.%s.nupkg" id tag]
+                                    if config.symbols then [ sprintf "bin/%s.%s.nupkg" id tag; sprintf "bin/%s.%s.symbols.nupkg" id tag]
                                     else [ sprintf "bin/%s.%s.nupkg" id tag ]
                                 for packageName in names do
                                     tracefn "pushing: %s" packageName
