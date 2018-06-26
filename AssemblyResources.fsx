@@ -133,7 +133,9 @@ module AssemblyResources =
 
     let copy (dstFolder : string) (source : string) =
         let f = FileInfo source
-        if f.Exists then CopyFile dstFolder source
+        if f.Exists then 
+            if Directory.Exists dstFolder |> not then Directory.CreateDirectory dstFolder |> ignore
+            CopyFile dstFolder source
         else 
             let di = DirectoryInfo source
             if di.Exists then
