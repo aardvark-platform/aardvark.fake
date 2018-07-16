@@ -33,27 +33,27 @@ module Startup =
     type private Arguments =
         | Debug
         | Verbose
-        | Symbols
+        | Pre
 
         interface IArgParserTemplate with
             member s.Usage =
                 match s with
                     | Debug -> "debug build"
                     | Verbose -> "verbose mode"
-                    | Symbols -> "symbols"
+                    | Pre -> "prerelease package"
 
     let private argParser = ArgumentParser.Create<Arguments>()
 
     type Config =
         {
             debug : bool
-            symbols : bool
+            prerelease : bool
             verbose : bool
             target : string
             args : list<string>
         }
 
-    let mutable config = { debug = false; symbols = false; verbose = false; target = "Default"; args = [] }
+    let mutable config = { debug = false; prerelease = false; verbose = false; target = "Default"; args = [] }
 
     let entry() =
         Environment.SetEnvironmentVariable("Platform", "Any CPU")
@@ -62,7 +62,7 @@ module Startup =
             let res = argParser.Parse(argv, ignoreUnrecognized = true) 
             let debug = res.Contains <@ Debug @>
             let verbose = res.Contains <@ Verbose @>
-            let symbols = res.Contains <@ Symbols @>
+            let prerelease = res.Contains <@ Pre @>
 
             printfn "parsed options: debug=%b, verbose=%b" debug verbose
             let argv = argv |> Array.filter (fun str -> not (str.StartsWith "-")) |> Array.toList
@@ -74,12 +74,54 @@ module Startup =
 
             //Paket.Logging.verbose <- verbose
 
-            config <- { debug = debug; symbols = symbols; verbose = verbose; target = target; args = args }
+            config <- { debug = debug; prerelease = prerelease; verbose = verbose; target = target; args = args }
 
             //Environment.SetEnvironmentVariable("Target", target)
             Run target
         with e ->
             Run "Help"
+
+    module NugetInfo = 
+        open SemVerHelper
+
+        let private adjust (v : PreRelease) =
+            let o = 
+                match v.Number with
+                    | Some n -> sprintf "%s%d" v.Name n
+                    | None -> v.Name
+            { v with
+                Origin = o
+                Parts = [AlphaNumeric o]
+            }
+
+        let nextVersion (major : bool) (prerelease : bool) (v : string) =
+            let v : SemVerInfo = SemVerHelper.parse v
+            let version = 
+                match v.PreRelease with
+                    | Some _ when prerelease -> v
+                    | Some _ -> { v with PreRelease = None }
+                    | _ ->
+                        match major with
+                            | false -> { v with Patch = v.Patch + 1 }
+                            | true -> { v with Minor = v.Minor + 1 }
+
+            if prerelease then
+                let pre = 
+                    version.PreRelease |> Option.map (fun p -> 
+                        { p with Number = p.Number |> Option.map (fun v -> v + 1) |> Option.defaultValue 2 |> Some }
+                    )
+
+                let def =
+                    {
+                        Origin = "prerelease1"
+                        Name = "prerelease"
+                        Number = Some 1
+                        Parts = [ AlphaNumeric "prerelease1" ]
+                    }
+                { version with PreRelease = pre |> Option.defaultValue def |> adjust |> Some  }.ToString()
+            else
+                { version with PreRelease = None}.ToString()
+    
 
 
 module DefaultSetup =
@@ -149,9 +191,6 @@ module DefaultSetup =
             if config.debug then
                 MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
             else
-                if config.symbols then
-                    MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
-
                 MSBuild "" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
         )
 
@@ -185,8 +224,6 @@ module DefaultSetup =
                     command
             
                 
-
-            if config.symbols then AdditionalSources.shellExecutePaket None symbolCommand
             AdditionalSources.shellExecutePaket None command
         )
 
@@ -240,9 +277,7 @@ module DefaultSetup =
                     | Some accessKey ->
                         try
                             for id in myPackages do
-                                let names =
-                                    if config.symbols then [ sprintf "bin/%s.%s.nupkg" id tag; sprintf "bin/%s.%s.symbols.nupkg" id tag]
-                                    else [ sprintf "bin/%s.%s.nupkg" id tag ]
+                                let names = [ sprintf "bin/%s.%s.nupkg" id tag ]
                                 for packageName in names do
                                     tracefn "pushing: %s" packageName
                                     //Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
@@ -256,60 +291,52 @@ module DefaultSetup =
 
 
         Target "PushMinor" (fun () ->
-
             let old = getGitTag()
-            match Version.TryParse(old) with
-             | (true,v) ->
-                  let newVersion = Version(v.Major,v.Minor,v.Build + 1) |> string
-                  if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
-                    tracefn "created tag %A" newVersion
-            
-                    try
-                        Run "Push"
+            let newVersion = NugetInfo.nextVersion false config.prerelease old
 
-                        try
-                            let tag = getGitTag()
-                            Fake.Git.Branches.pushTag "." "origin" newVersion
-                        with e ->
-                            traceError "failed to push tag %A to origin (please push yourself)" 
-                            raise e
+            if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
+                tracefn "created tag %A" newVersion
+                try
+                    Run "Push"
+
+                    try
+                        let tag = getGitTag()
+                        Fake.Git.Branches.pushTag "." "origin" newVersion
                     with e ->
-                        Fake.Git.Branches.deleteTag "." newVersion
-                        tracefn "deleted tag %A" newVersion
+                        traceError "failed to push tag %A to origin (please push yourself)" 
                         raise e
-                  else
-                    failwithf "could not create tag: %A" newVersion
-             | _ -> 
-                failwithf "could not parse tag: %A" old
+                with e ->
+                    Fake.Git.Branches.deleteTag "." newVersion
+                    tracefn "deleted tag %A" newVersion
+                    raise e
+            else
+                failwithf "could not create tag: %A" newVersion
         )
 
         
         Target "PushMajor" (fun () ->
 
             let old = getGitTag()
-            match Version.TryParse(old) with
-             | (true,v) ->
-                  let newVersion = Version(v.Major,v.Minor + 1,0) |> string
-                  if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
-                    tracefn "created tag %A" newVersion
-            
-                    try
-                        Run "Push"
+            let newVersion = NugetInfo.nextVersion true config.prerelease old
 
-                        try
-                            let tag = getGitTag()
-                            Fake.Git.Branches.pushTag "." "origin" newVersion
-                        with e ->
-                            traceError "failed to push tag %A to origin (please push yourself)" 
-                            raise e
+            if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
+                tracefn "created tag %A" newVersion
+            
+                try
+                    Run "Push"
+
+                    try
+                        let tag = getGitTag()
+                        Fake.Git.Branches.pushTag "." "origin" newVersion
                     with e ->
-                        Fake.Git.Branches.deleteTag "." newVersion
-                        tracefn "deleted tag %A" newVersion
+                        traceError "failed to push tag %A to origin (please push yourself)" 
                         raise e
-                  else
-                    failwithf "could not create tag: %A" newVersion
-             | _ -> 
-                failwithf "could not parse tag: %A" old
+                with e ->
+                    Fake.Git.Branches.deleteTag "." newVersion
+                    tracefn "deleted tag %A" newVersion
+                    raise e
+            else
+                failwithf "could not create tag: %A" newVersion
         )
 
         Target "AddNativeResources" (fun () ->
