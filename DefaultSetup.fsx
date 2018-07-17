@@ -125,8 +125,9 @@ module Startup =
 
 
 module DefaultSetup =
-    
-    let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
+
+    let packageNameRx = Regex @"^(?<name>[a-zA-Z_0-9\.-]+?)\.(?<version>([0-9]+\.)*[0-9]+)(.*?)\.nupkg$"
+
 
     let install(solutionNames : seq<string>) = 
         let core = Seq.head solutionNames
@@ -247,7 +248,8 @@ module DefaultSetup =
             for (target, keyName) in targets do
 
                 let packages = !!"bin/*.nupkg"
-                let packageNameRx = Regex @"(?<name>[a-zA-Z_0-9\.]+?)\.(?<version>([0-9]+\.)*[0-9]+)\.nupkg"
+                let packageNameRx = Regex @"^(?<name>[a-zA-Z_0-9\.-]+?)\.(?<version>([0-9]+\.)*[0-9]+)(.*?)\.nupkg$"
+
 
                 let myPackages = 
                     packages 
