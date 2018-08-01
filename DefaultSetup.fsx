@@ -64,7 +64,7 @@ module Startup =
             let verbose = res.Contains <@ Verbose @>
             let prerelease = res.Contains <@ Pre @>
 
-            printfn "parsed options: debug=%b, verbose=%b" debug verbose
+            printfn "parsed options: debug=%b, verbose=%b prerelease=%b" debug verbose prerelease
             let argv = argv |> Array.filter (fun str -> not (str.StartsWith "-")) |> Array.toList
 
             let target, args =
@@ -103,7 +103,7 @@ module Startup =
                     | _ ->
                         match major with
                             | false -> { v with Patch = v.Patch + 1 }
-                            | true -> { v with Minor = v.Minor + 1 }
+                            | true -> { v with Minor = v.Minor + 1; Patch = 0 }
 
             if prerelease then
                 let pre = 
@@ -121,13 +121,22 @@ module Startup =
                 { version with PreRelease = pre |> Option.defaultValue def |> adjust |> Some  }.ToString()
             else
                 { version with PreRelease = None}.ToString()
-    
 
 
 module DefaultSetup =
 
     let packageNameRx = Regex @"^(?<name>[a-zA-Z_0-9\.-]+?)\.(?<version>([0-9]+\.)*[0-9]+)(.*?)\.nupkg$"
 
+    let getUserConsentForPush (oldVersion : string) (newVersion : string) =
+            printfn ""
+            printfn "Package version (current): %s" oldVersion
+            printfn "Package version (new)    : %s" newVersion
+            printf "Create and push new version to deploy targets (Y|_N_)? "
+            match Console.ReadLine() with
+            | "y"
+            | "Y" -> ()
+            | _ -> printfn "aborting"
+                   Environment.Exit(0) |> ignore
 
     let install(solutionNames : seq<string>) = 
         let core = Seq.head solutionNames
@@ -296,6 +305,8 @@ module DefaultSetup =
             let old = getGitTag()
             let newVersion = NugetInfo.nextVersion false config.prerelease old
 
+            getUserConsentForPush old newVersion
+
             if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
                 tracefn "created tag %A" newVersion
                 try
@@ -316,8 +327,11 @@ module DefaultSetup =
         )
 
         Target "PushPre" (fun () ->
+
             let old = getGitTag()
             let newVersion = NugetInfo.nextVersion false true old
+
+            getUserConsentForPush old newVersion
 
             if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
                 tracefn "created tag %A" newVersion
@@ -343,6 +357,8 @@ module DefaultSetup =
 
             let old = getGitTag()
             let newVersion = NugetInfo.nextVersion true config.prerelease old
+
+            getUserConsentForPush old newVersion
 
             if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
                 tracefn "created tag %A" newVersion
@@ -402,51 +418,82 @@ module DefaultSetup =
             let highlightColor = ConsoleColor.Yellow
             printfn "aardvark build script"
             printfn "  syntax: build [Target] [Options] where target is one of the following"
-            printfn "          while Options = --verbose | --debug"
+            printfn "          with Options = --verbose | --debug |--pre"
             printfn "          please note, that for reasons, debug builds are also built into bin/Release"
+            
             Console.ForegroundColor<-highlightColor
             printfn "    Default (which is executed when no target is given)"
             Console.ForegroundColor<-defColor
             printfn "      same like compile but also copying native dependencies (from libs/Native/PROJECTNAME)"
             printfn "      to bin/Release and injecting them as resource into the resulting dll/exe"
+            
             Console.ForegroundColor<-highlightColor
             printfn "    Compile"
             Console.ForegroundColor<-defColor
             printfn "      builds the project's solution to bin/Release"
+            
             Console.ForegroundColor<-highlightColor
             printfn "    Clean"
             Console.ForegroundColor<-defColor
             printfn "      deletes all output files in bin/Debug and bin/Release"
+            
             Console.ForegroundColor<-highlightColor
             printfn "    CreatePackage"
             Console.ForegroundColor<-defColor
             printfn "      creates packages for all projects having a paket.template using the current"
             printfn "      git tag as version (note that the tag needs to have a comment)."
             printfn "      the resulting packages are stored in bin/*.nupkg"
+            
             Console.ForegroundColor<-highlightColor
             printfn "    Push"
             Console.ForegroundColor<-defColor
-            printfn "      creates the packages and deploys them to all feeds specified in deploy.targets"
+            printfn "      creates packages (see CreatePackage) and deploys to all feeds specified in deploy.targets"
+
+            Console.ForegroundColor<-highlightColor
+            printfn "    PushMinor [--pre]"
+            Console.ForegroundColor<-defColor
+            printfn "      increments current version and creates and deploys package(s) (Push), e.g."
+            printfn "        1.2.3 -> 1.2.4"
+            printfn "        1.2.3 -> 1.2.4-prelease1 (when using --pre)"
+
+            Console.ForegroundColor<-highlightColor
+            printfn "    PushMajor [--pre]"
+            Console.ForegroundColor<-defColor
+            printfn "      increments current version and creates and deploys package(s) (Push), e.g."
+            printfn "        1.2.3 -> 1.3.0"
+            printfn "        1.2.3 -> 1.3.0-prelease1 (when using --pre)"
+
+            Console.ForegroundColor<-highlightColor
+            printfn "    PushPre"
+            Console.ForegroundColor<-defColor
+            printfn "      creates and deploys prelease package(s), e.g."
+            printfn "        1.2.3           -> 1.2.4-prelease1"
+            printfn "        1.2.3-prelease1 -> 1.2.3-prelease2"
+
             Console.ForegroundColor<-highlightColor
             printfn "    Restore"
             Console.ForegroundColor<-defColor
             printfn "      ensures that all packages given in paket.lock are installed"
             printfn "      with their respective version."
+            
             Console.ForegroundColor<-highlightColor
             printfn "    Install"
             Console.ForegroundColor<-defColor
             printfn "      installs all packages specified in paket.dependencies and"
             printfn "      adjusts project files according to paket.references (next to the project)"
             printfn "      may also perform a new resolution when versions in paket.dependencies have changed."
+            
             Console.ForegroundColor<-highlightColor            
             printfn "    Update [regex]"
             Console.ForegroundColor<-defColor
             printfn "      searches for newer compatible version (according to paket.dependencies)"
             printfn "      and installs them if possible. this target also adjusts the project files"
+            
             Console.ForegroundColor<-highlightColor            
             printfn "    UpdateBuildScript"
             Console.ForegroundColor<-defColor
             printfn "      updates the build script and its dependencies."
+            
             printfn ""
             printfn "  advanced features"
             Console.ForegroundColor<-highlightColor
@@ -475,8 +522,10 @@ module DefaultSetup =
 
         "AddNativeResources" ==> "CreatePackage" |> ignore
         "Compile" ==> "CreatePackage" |> ignore
-        "CreatePackage" ==> "Push" |> ignore
 
         "Compile" ==> "AddNativeResources" ==> "Default" |> ignore
+
+        "CreatePackage" ==> "Push" |> ignore
         "CreatePackage" ==> "PushMinor" |> ignore
         "CreatePackage" ==> "PushMajor" |> ignore
+        "CreatePackage" ==> "PushPre" |> ignore
