@@ -254,6 +254,32 @@ module DefaultSetup =
                 else
                     [||]
 
+            let allOk = 
+                targets |> Array.forall (fun (_,keyName) -> File.Exists <| Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", keyName))
+
+            let cloneIt dir =
+                tracefn "cloning to: %s" dir
+                try 
+                    Fake.Git.Repository.clone "." "git@github.com:haraldsteinlechner/aardvark-keys.git" dir
+                    System.Threading.Thread.Sleep 200
+                with e -> 
+                    traceError <| sprintf "could not clone aardvark keys. ask the platform team for assistance... (%A)" e.Message
+
+            if not allOk  then                  // ok let us try to find a key in the intaarnet.
+                let dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys")
+                if Directory.Exists dir then
+                    try 
+                        tracefn "pulling: %s" dir
+                        Fake.Git.Branches.pull dir "origin" "master"
+                    with e -> 
+                        tracefn "could not pull keys dir."
+                        Directory.Delete(dir,true) |> ignore
+                        System.Threading.Thread.Sleep 200
+                        cloneIt dir
+                else
+                    cloneIt dir
+       
+
             for (target, keyName) in targets do
 
                 let packages = !!"bin/*.nupkg"
@@ -273,27 +299,20 @@ module DefaultSetup =
 
    
                 let accessKey =
-                    let accessKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", keyName)
-                    if File.Exists accessKeyPath then 
-                        let r = Some (File.ReadAllText accessKeyPath)
-                        tracefn "key: %A" r.Value
-                        r
-                    else 
-                        // ok let us try to find a key in the intaarnet.
-                        let dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys")
-                        if Directory.Exists dir then Directory.Delete dir |> ignore; Directory.CreateDirectory dir |> ignore
-                        tracefn "cloning to: %s" dir
-                        try 
-                            Fake.Git.Repository.clone dir "git@github.com:haraldsteinlechner/aardvark-keys.git" dir
-                            let accessKeyPath = Path.Combine(dir, keyName)
-                            if File.Exists accessKeyPath then
-                                let r = Some (File.ReadAllText accessKeyPath)
-                                tracefn "key: %A" r.Value
-                                r
-                            else None
-                        with e -> 
-                            traceError <| sprintf "could not clone aardvark keys. ask the platform team for assistance... (%A)" e.Message
-                            None
+                    let accessKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".ssh")
+
+                    let readKey dir =
+                        let accessKeyPath = Path.Combine(dir, keyName)
+                        if File.Exists accessKeyPath then
+                            let r = Some (File.ReadAllText accessKeyPath)
+                            tracefn "key: %A" r.Value
+                            r
+                        else printfn "bad:%s" accessKeyPath; None
+
+                    match readKey accessKeyPath with   
+                        | Some key when false -> Some key
+                        | _ -> readKey (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys"))
+
 
                 let branch = Fake.Git.Information.getBranchName "."
                 let releaseNotes = Fake.Git.Information.getCurrentHash()
