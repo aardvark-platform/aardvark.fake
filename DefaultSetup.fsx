@@ -278,7 +278,22 @@ module DefaultSetup =
                         let r = Some (File.ReadAllText accessKeyPath)
                         tracefn "key: %A" r.Value
                         r
-                    else None
+                    else 
+                        // ok let us try to find a key in the intaarnet.
+                        let dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys")
+                        if Directory.Exists dir then Directory.Delete dir |> ignore; Directory.CreateDirectory dir |> ignore
+                        tracefn "cloning to: %s" dir
+                        try 
+                            Fake.Git.Repository.clone dir "git@github.com:haraldsteinlechner/aardvark-keys.git" dir
+                            let accessKeyPath = Path.Combine(dir, keyName)
+                            if File.Exists accessKeyPath then
+                                let r = Some (File.ReadAllText accessKeyPath)
+                                tracefn "key: %A" r.Value
+                                r
+                            else None
+                        with e -> 
+                            traceError <| sprintf "could not clone aardvark keys. ask the platform team for assistance... (%A)" e.Message
+                            None
 
                 let branch = Fake.Git.Information.getBranchName "."
                 let releaseNotes = Fake.Git.Information.getCurrentHash()
