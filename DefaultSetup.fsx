@@ -310,7 +310,7 @@ module DefaultSetup =
                         else printfn "bad:%s" accessKeyPath; None
 
                     match readKey accessKeyPath with   
-                        | Some key when false -> Some key
+                        | Some key -> Some key
                         | _ -> readKey (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys"))
 
 
