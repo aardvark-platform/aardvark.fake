@@ -84,6 +84,11 @@ module Startup =
     module NugetInfo = 
         open SemVerHelper
 
+        let defaultValue (fallback : 'a) (o : Option<'a>) =
+            match o with    
+                | Some o -> o
+                | None -> fallback
+
         let private adjust (v : PreRelease) =
             let o = 
                 match v.Number with
@@ -108,7 +113,7 @@ module Startup =
             if prerelease then
                 let pre = 
                     version.PreRelease |> Option.map (fun p -> 
-                        { p with Number = p.Number |> Option.map (fun v -> v + 1) |> Option.defaultValue 2 |> Some }
+                        { p with Number = p.Number |> Option.map (fun v -> v + 1) |> defaultValue 2 |> Some }
                     )
 
                 let def =
@@ -118,7 +123,7 @@ module Startup =
                         Number = Some 1
                         Parts = [ AlphaNumeric "prerelease1" ]
                     }
-                { version with PreRelease = pre |> Option.defaultValue def |> adjust |> Some  }.ToString()
+                { version with PreRelease = pre |> defaultValue def |> adjust |> Some  }.ToString()
             else
                 { version with PreRelease = None}.ToString()
 
