@@ -578,7 +578,6 @@ module DefaultSetup =
         "Compile" ==> "AddNativeResources" ==> "Default" |> ignore
 
         "CreatePackage" ==> "OverrideGlobalPackages" |> ignore
-        "CreatePackage" ==> "SourceLink.Test"  |> ignore
 
         "CreatePackage" ==> "Push" |> ignore
         "CreatePackage" ==> "PushMinor" |> ignore
