@@ -216,10 +216,6 @@ module DefaultSetup =
 
         Target "CreatePackage" (fun () ->
 
-            if IncrediblyUglyHackfulNugetOverride.isHackActive () then
-                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
-                System.Console.ReadLine() |> ignore
-
             let releaseNotes = try Fake.Git.Information.getCurrentHash() |> Some with _ -> None
             if releaseNotes.IsNone then 
                 //traceError "could not grab git status. Possible source: no git, not a git working copy"
@@ -248,6 +244,10 @@ module DefaultSetup =
         )
 
         Target "Push" (fun () ->
+            if IncrediblyUglyHackfulNugetOverride.isHackActive () then
+                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
+                System.Console.ReadLine() |> ignore
+
             let rx = Regex @"(?<url>[^ ]+)[ \t]*(?<keyfile>[^ ]+)"
             let targets = "deploy.targets"
             let targets =
@@ -346,6 +346,10 @@ module DefaultSetup =
 
 
         Target "PushMinor" (fun () ->
+            if IncrediblyUglyHackfulNugetOverride.isHackActive () then
+                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
+                System.Console.ReadLine() |> ignore
+            
             let old = getGitTag()
             let newVersion = NugetInfo.nextVersion false config.prerelease old
 
@@ -371,6 +375,9 @@ module DefaultSetup =
         )
 
         Target "PushPre" (fun () ->
+            if IncrediblyUglyHackfulNugetOverride.isHackActive () then
+                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
+                System.Console.ReadLine() |> ignore
 
             let old = getGitTag()
             let newVersion = NugetInfo.nextVersion false true old
@@ -398,6 +405,9 @@ module DefaultSetup =
 
         
         Target "PushMajor" (fun () ->
+            if IncrediblyUglyHackfulNugetOverride.isHackActive () then
+                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
+                System.Console.ReadLine() |> ignore
 
             let old = getGitTag()
             let newVersion = NugetInfo.nextVersion true config.prerelease old
