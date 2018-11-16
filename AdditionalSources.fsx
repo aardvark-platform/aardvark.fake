@@ -51,6 +51,93 @@ module PathHelpers =
             try File.Delete f
             with e -> traceError (sprintf "could not delete %A" f)
 
+[<AutoOpen>]
+module IncrediblyUglyHackfulNugetOverride =
+
+    open System.Text.RegularExpressions
+    open System.IO.Compression
+    open System.Collections.Generic
+
+
+    let userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+    let hackedPackagesFile = Path.Combine(userProfile,".nuget","hackedFiles.txt")
+    
+    let isHackActive () =
+        if File.Exists hackedPackagesFile then
+            let hacks = File.ReadAllLines hackedPackagesFile
+            let nonEmptyHack = hacks |> Array.filter (fun hack -> hack.Length > 0)
+            tracefn "here are hacked packages: %A" nonEmptyHack
+            true
+        else false
+
+    let copyToGlobal (getVersion : unit -> string) (removeHacks : bool) =
+        let packages = !!"bin/*.nupkg"
+        let packageNameRx = Regex @"^(?<name>[a-zA-Z_0-9\.-]+?)\.(?<version>([0-9]+\.)*[0-9]+)(.*?)\.nupkg$"
+
+        let myPackages = 
+            packages 
+                |> Seq.choose (fun p ->
+                    let m = packageNameRx.Match (Path.GetFileName p)
+                    if m.Success then 
+                        Some(m.Groups.["name"].Value)
+                    else
+                        None
+                )
+                |> Set.ofSeq
+
+        let tag = getVersion()
+
+        if not (File.Exists hackedPackagesFile) then File.WriteAllLines(hackedPackagesFile,[||])
+
+        let addToHacked (path : string) =
+            let hacked = File.ReadAllLines hackedPackagesFile |> HashSet
+            if hacked.Add path then
+                // fresh hack
+                File.AppendAllLines(hackedPackagesFile,[|path|])
+
+        let removeHacked (path : string) =
+            let hacked = File.ReadAllLines hackedPackagesFile |> HashSet
+            if hacked.Remove path then
+                File.Delete hackedPackagesFile
+                File.WriteAllLines(hackedPackagesFile, hacked |> Seq.toArray)
+
+        let rec reallyDelete path =
+            if Directory.Exists path then
+                for d in Directory.GetDirectories path do reallyDelete d
+                System.Threading.Thread.Sleep 10
+                try Directory.Delete(path,true) with | :? IOException as e -> tracefn "could not delete. retry"; System.Threading.Thread.Sleep 100; reallyDelete path
+
+
+        for id in myPackages do
+            let names = [ sprintf "bin/%s.%s.nupkg" id tag ]
+            for packageName in names do
+                let target = Path.Combine(userProfile,".nuget","packages",id,string tag)
+                let files = Fake.ArchiveHelper.Zip.Extract
+                if removeHacks then    
+                    if Directory.Exists target then 
+                        printfn "deleting: %s" target
+                        reallyDelete target
+                        removeHacked target
+                else
+                    tracefn "unzip: %s -> %s" packageName target
+                    if not (Directory.Exists target) || Seq.isEmpty (Directory.EnumerateFileSystemEntries(target)) then
+                        traceError "cannot hack non existing project"
+                    else
+                        use archive = System.IO.Compression.ZipFile.OpenRead(packageName)
+                        let mutable hacked = false
+                        for entry in archive.Entries do
+                            if entry.Name.EndsWith("dll") then
+                                let entryPath = Path.Combine(target,entry.FullName)
+                                tracefn "extract %s to %s" entry.FullName entryPath 
+                                entry.ExtractToFile(entryPath,true)
+                                // record that we destroyed integrity of this package
+                                hacked <- true
+                        if hacked then  
+                            addToHacked target
+
+        let hackedFiles = File.ReadAllLines hackedPackagesFile
+        tracefn "hacked files: \n%A" hackedFiles
+
 module AdditionalSources =
 
     do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"../../../../")

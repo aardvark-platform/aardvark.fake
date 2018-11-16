@@ -215,6 +215,11 @@ module DefaultSetup =
         )
 
         Target "CreatePackage" (fun () ->
+
+            if IncrediblyUglyHackfulNugetOverride.isHackActive () then
+                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
+                System.Console.ReadLine() |> ignore
+
             let releaseNotes = try Fake.Git.Information.getCurrentHash() |> Some with _ -> None
             if releaseNotes.IsNone then 
                 //traceError "could not grab git status. Possible source: no git, not a git working copy"
@@ -450,6 +455,14 @@ module DefaultSetup =
                                 AssemblyResources.addFolder d p
                 | None ->
                     ()
+        )
+
+        Target "OverrideGlobalPackages" (fun () ->
+            IncrediblyUglyHackfulNugetOverride.copyToGlobal getGitTag false 
+        )
+
+        Target "RevertGlobalPackages" (fun () ->
+            IncrediblyUglyHackfulNugetOverride.copyToGlobal getGitTag true 
         )
 
         Target "Help" (fun () ->
