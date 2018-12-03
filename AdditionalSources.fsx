@@ -66,8 +66,10 @@ module IncrediblyUglyHackfulNugetOverride =
         if File.Exists hackedPackagesFile then
             let hacks = File.ReadAllLines hackedPackagesFile
             let nonEmptyHack = hacks |> Array.filter (fun hack -> hack.Length > 0)
-            tracefn "here are hacked packages: %A" nonEmptyHack
-            true
+            if Array.isEmpty nonEmptyHack then false
+            else
+                tracefn "here are hacked packages: %A" nonEmptyHack
+                true
         else false
 
     let copyToGlobal (getVersion : unit -> string) (removeHacks : bool) =
