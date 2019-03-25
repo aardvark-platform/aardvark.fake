@@ -80,7 +80,10 @@ module IncrediblyUglyHackfulNugetOverride =
                 Fake.FileHelper.DeleteDir h 
                 hacked.Remove h |> ignore
             with e -> tracefn "could not remove hacked file %A" e
-        File.WriteAllLines(hackedPackagesFile, hacked |> Seq.toArray)
+        if hacked.Count = 0 then 
+            tracefn "no hacks remaining. removing hacked file."
+            File.Delete hackedPackagesFile
+        else File.WriteAllLines(hackedPackagesFile, hacked |> Seq.toArray)
 
     let copyToGlobal (getVersion : unit -> string) (removeHacks : bool) =
         let packages = !!"bin/*.nupkg"
@@ -111,7 +114,10 @@ module IncrediblyUglyHackfulNugetOverride =
             let hacked = File.ReadAllLines hackedPackagesFile |> HashSet
             if hacked.Remove path then
                 File.Delete hackedPackagesFile
-                File.WriteAllLines(hackedPackagesFile, hacked |> Seq.toArray)
+                if hacked.Count = 0 then 
+                    tracefn "no hacks remaining. removing hacked file."
+                    File.Delete hackedPackagesFile
+                else File.WriteAllLines(hackedPackagesFile, hacked |> Seq.toArray)
 
         let rec reallyDelete path =
             if Directory.Exists path then
