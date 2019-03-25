@@ -475,6 +475,10 @@ module DefaultSetup =
             IncrediblyUglyHackfulNugetOverride.copyToGlobal getGitTag true 
         )
 
+        Target "RevertAllGlobalPackages" (fun () ->
+            IncrediblyUglyHackfulNugetOverride.removeAllHacked()
+        )
+
         Target "Help" (fun () ->
             let defColor = Console.ForegroundColor
             let highlightColor = ConsoleColor.Yellow

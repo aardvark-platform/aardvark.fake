@@ -72,6 +72,16 @@ module IncrediblyUglyHackfulNugetOverride =
                 true
         else false
 
+    let removeAllHacked () =
+        let hacked = File.ReadAllLines hackedPackagesFile |> HashSet
+        for h in hacked |> Seq.toArray do
+            try 
+                tracefn "removing hack: %A" h
+                Fake.FileHelper.DeleteDir h 
+                hacked.Remove h |> ignore
+            with e -> tracefn "could not remove hacked file %A" e
+        File.WriteAllLines(hackedPackagesFile, hacked |> Seq.toArray)
+
     let copyToGlobal (getVersion : unit -> string) (removeHacks : bool) =
         let packages = !!"bin/*.nupkg"
         let packageNameRx = Regex @"^(?<name>[a-zA-Z_0-9\.-]+?)\.(?<version>([0-9]+\.)*[0-9]+)(.*?)\.nupkg$"
