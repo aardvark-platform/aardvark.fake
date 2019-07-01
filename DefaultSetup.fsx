@@ -92,7 +92,7 @@ module Startup =
         let private adjust (v : PreRelease) =
             let o = 
                 match v.Number with
-                    | Some n -> sprintf "%s%d" v.Name n
+                    | Some n -> sprintf "%s%04d" v.Name n
                     | None -> v.Name
             { v with
                 Origin = o
@@ -204,7 +204,7 @@ module DefaultSetup =
         Target "Compile" (fun () ->
             
             if config.debug then
-                MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion; ] [core] |> ignore<list<string>>
+                MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
             else
                 MSBuild "" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
         )
@@ -473,10 +473,6 @@ module DefaultSetup =
 
         Target "RevertGlobalPackages" (fun () ->
             IncrediblyUglyHackfulNugetOverride.copyToGlobal getGitTag true 
-        )
-
-        Target "RevertAllGlobalPackages" (fun () ->
-            IncrediblyUglyHackfulNugetOverride.removeAllHacked()
         )
 
         Target "Help" (fun () ->
