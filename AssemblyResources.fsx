@@ -33,7 +33,7 @@ module AssemblyResources =
         let files = Directory.GetFiles(folder)
         for f in files do
             printfn "adding file: %A" f
-            let e = archive.CreateEntryFromFile(f, Path.Combine(path, Path.GetFileName f))
+            archive.CreateEntryFromFile(f, Path.Combine(path, Path.GetFileName f)) |> ignore
             ()
 
         let sd = Directory.GetDirectories(folder)
@@ -138,7 +138,7 @@ module AssemblyResources =
             if di.Exists then
                 let dst = Path.Combine(dstFolder, di.Name)
                 if Directory.Exists dst |> not then Directory.CreateDirectory dst |> ignore
-                let s = Shell.copyRecursive source dst true 
+                Shell.copyRecursive source dst true |> ignore
                 ()
 
     let copyDependencies (folder : string) (targets : seq<string>) =

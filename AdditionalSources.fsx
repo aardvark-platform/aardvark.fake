@@ -123,7 +123,7 @@ module IncrediblyUglyHackfulNugetOverride =
             if Directory.Exists path then
                 for d in Directory.GetDirectories path do reallyDelete d
                 System.Threading.Thread.Sleep 10
-                try Directory.Delete(path,true) with | :? IOException as e -> Trace.logfn "could not delete. retry"; System.Threading.Thread.Sleep 100; reallyDelete path
+                try Directory.Delete(path,true) with | :? IOException -> Trace.logfn "could not delete. retry"; System.Threading.Thread.Sleep 100; reallyDelete path
 
 
         for id in myPackages do
@@ -159,7 +159,7 @@ module AdditionalSources =
 
     do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"../../../../")
     
-    let shellExecutePaket sln args =
+    let shellExecutePaket _sln args =
 // possible way to active detailed output...
 //        let args = 
 //            if verbose then
@@ -378,8 +378,6 @@ module AdditionalSources =
             | [] -> 
                 Trace.traceImportant "no sources found"
             | folders ->
-                let taskName = sprintf "adding sources: %A" folders
-          
                 Trace.traceVerbose "reading sources.lock"
                 let sourceFolders =
                     if File.Exists sourcesFileName then 
@@ -417,7 +415,7 @@ module AdditionalSources =
 
         for f in folders do
             let packages = findCreatedPackages f
-            for (id,v) in packages do
+            for (id,_v) in packages do
                 let path = Path.Combine("packages", id)
                 deleteDir path
 
