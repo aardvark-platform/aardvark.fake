@@ -1,5 +1,5 @@
 namespace LoadAll
-#I @"../../../../packages/build/aardvark-platform/aardvark.fake"
+#I @"../../../../packages/build"
 #I @"packages"
 
 #r "netstandard.dll"
