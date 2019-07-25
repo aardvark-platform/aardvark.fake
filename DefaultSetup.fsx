@@ -1,5 +1,5 @@
-//#I @"../../../../packages/build/aardvark-platform/aardvark.fake"
-#I @"packages/build/aardvark-platform/aardvark.fake"
+#I @"../../../../packages/build/aardvark-platform/aardvark.fake"
+//#I @"packages/build/aardvark-platform/aardvark.fake"
 #I @"packages"
 #r @"FAKE/tools/FakeLib.dll"
 #r @"FAKE/tools/Argu.dll"
