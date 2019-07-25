@@ -1,16 +1,6 @@
 ﻿#nowarn "211"
-#I @"../../../../packages/build"
-#I @"packages"
-#r @"Fake.Core.Context/lib/netstandard2.0/Fake.Core.Context.dll"
-#r @"Fake.Core.Trace/lib/netstandard2.0/Fake.Core.Trace.dll"
-#r @"Fake.Core.Environment/lib/netstandard2.0/Fake.Core.Environment.dll"
-#r @"Fake.Core.FakeVar/lib/netstandard2.0/Fake.Core.FakeVar.dll"
-#r @"Fake.DotNet.MSBuild/lib/netstandard2.0/Fake.DotNet.MSBuild.dll"
-#r @"Fake.IO.FileSystem/lib/netstandard2.0/Fake.IO.FileSystem.dll"
-#r @"Mono.Cecil/lib/net40/Mono.Cecil.dll"
-#r @"Mono.Cecil/lib/net40/Mono.Cecil.Pdb.dll"
-#r @"System.IO.Compression.dll"
-#r @"System.IO.Compression.FileSystem.dll"
+
+#load "loadall.fsx"
 
 namespace Aardvark.Fake
 
@@ -94,7 +84,7 @@ module AssemblyResources =
             let temp = System.IO.Path.GetTempFileName()
             let data =
                 try
-                    let mem = File.Open(temp,FileMode.Open)
+                    let mem = File.OpenWrite(temp)
                     let archive = new ZipArchive(mem, ZipArchiveMode.Create, true)
                     addFolderToArchive "" folder archive
 

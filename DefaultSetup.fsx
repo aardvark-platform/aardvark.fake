@@ -1,19 +1,6 @@
-#I @"../../../../packages/build/aardvark-platform/aardvark.fake"
-#I @"packages"
-#r @"Fake.Core.Context/lib/netstandard2.0/Fake.Core.Context.dll"
-#r @"Fake.Core.Trace/lib/netstandard2.0/Fake.Core.Trace.dll"
-#r @"Fake.Core.Environment/lib/netstandard2.0/Fake.Core.Environment.dll"
-#r @"Fake.Core.FakeVar/lib/netstandard2.0/Fake.Core.FakeVar.dll"
-#r @"Fake.DotNet.MSBuild/lib/netstandard2.0/Fake.DotNet.MSBuild.dll"
-#r @"Fake.IO.FileSystem/lib/netstandard2.0/Fake.IO.FileSystem.dll"
-#r @"Fake.Core.Process/lib/netstandard2.0/Fake.Core.Process.dll"
-#r @"Fake.Tools.Git/lib/netstandard2.0/Fake.Tools.Git.dll"
-#r @"Fake.Core.Target/lib/netstandard2.0/Fake.Core.Target.dll"
-#r @"Fake.Core.SemVer/lib/netstandard2.0/Fake.Core.SemVer.dll"
-#r @"Argu/lib/netstandard2.0/Argu.dll"
-
-#load @"AdditionalSources.fsx"
-#load @"AssemblyResources.fsx"
+#load "loadall.fsx"
+#load "AdditionalSources.fsx"
+#load "AssemblyResources.fsx"
 
 namespace Aardvark.Fake
 
