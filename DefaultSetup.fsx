@@ -103,14 +103,16 @@ module Startup =
 
         let nextVersion (major : bool) (prerelease : bool) (v : string) =
             let v : SemVerInfo = SemVer.parse v
+
             let version = 
                 match v.PreRelease with
-                    | Some _ when prerelease -> v
-                    | Some _ -> { v with PreRelease = None }
+                    | Some _ when prerelease -> { v with Original = None }
+                    | Some _ -> { v with PreRelease = None; Original = None }
                     | _ ->
                         match major with
-                            | false -> { v with Patch = v.Patch + 1u }
-                            | true -> { v with Minor = v.Minor + 1u; Patch = 0u }
+                            | false -> { v with Patch = v.Patch + 1u; Original = None }
+                            | true -> { v with Minor = v.Minor + 1u; Patch = 0u; Original = None }
+
 
             if prerelease then
                 let pre = 
@@ -594,6 +596,6 @@ module DefaultSetup =
         "CreatePackage" ==> "OverrideGlobalPackages" |> ignore
 
         "CreatePackage" ==> "Push" |> ignore
-        "CreatePackage" ==> "PushMinor" |> ignore
-        "CreatePackage" ==> "PushMajor" |> ignore
-        "CreatePackage" ==> "PushPre" |> ignore
+        "Compile" ==> "PushMinor" |> ignore
+        "Compile" ==> "PushMajor" |> ignore
+        "Compile" ==> "PushPre" |> ignore
