@@ -58,29 +58,31 @@ module Startup =
     let entry() =
         Environment.SetEnvironmentVariable("Platform", "Any CPU")
         let argv = Environment.GetCommandLineArgs() |> Array.skip 2 // yeah really
-        try 
-            let res = argParser.Parse(argv, ignoreUnrecognized = true) 
-            let debug = res.Contains <@ Debug @>
-            let verbose = res.Contains <@ Verbose @>
-            let prerelease = res.Contains <@ Pre @>
+        let res = argParser.Parse(argv, ignoreUnrecognized = true) 
+        let debug = res.Contains <@ Debug @>
+        let verbose = res.Contains <@ Verbose @>
+        let prerelease = res.Contains <@ Pre @>
 
-            printfn "parsed options: debug=%b, verbose=%b prerelease=%b" debug verbose prerelease
-            let argv = argv |> Array.filter (fun str -> not (str.StartsWith "-")) |> Array.toList
+        printfn "parsed options: debug=%b, verbose=%b prerelease=%b" debug verbose prerelease
+        let argv = argv |> Array.filter (fun str -> not (str.StartsWith "-")) |> Array.toList
 
-            let target, args =
-                match argv with
-                    | [] -> "Default", []
-                    | t::rest -> t, rest
+        let target, args =
+            match argv with
+                | [] -> "Default", []
+                | t::rest -> t, rest
 
-            //Paket.Logging.verbose <- verbose
+        //Paket.Logging.verbose <- verbose
 
-            config <- { debug = debug; prerelease = prerelease; verbose = verbose; target = target; args = args }
+        config <- { debug = debug; prerelease = prerelease; verbose = verbose; target = target; args = args }
 
-            //Environment.SetEnvironmentVariable("Target", target)
+        //Environment.SetEnvironmentVariable("Target", target)
             
-            Target.run 1 target []
-        with e ->
-            Target.run 1  "Help" []
+        let target = 
+            try ignore (Target.get target); target
+            with _ -> "Help"
+            
+            
+        Target.run 1 target []
 
     module NugetInfo = 
         let defaultValue (fallback : 'a) (o : Option<'a>) =
@@ -364,7 +366,6 @@ module DefaultSetup =
                     Target.run 1 "Push" []
 
                     try
-                        let tag = getGitTag()
                         Branches.pushTag "." "origin" newVersion
                     with e ->
                         Trace.traceError "failed to push tag %A to origin (please push yourself)" 
