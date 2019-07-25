@@ -1,8 +1,16 @@
 #I @"../../../../packages/build/aardvark-platform/aardvark.fake"
-//#I @"packages/build/aardvark-platform/aardvark.fake"
 #I @"packages"
-#r @"FAKE/tools/FakeLib.dll"
-#r @"FAKE/tools/Argu.dll"
+#r @"Fake.Core.Context/lib/netstandard2.0/Fake.Core.Context.dll"
+#r @"Fake.Core.Trace/lib/netstandard2.0/Fake.Core.Trace.dll"
+#r @"Fake.Core.Environment/lib/netstandard2.0/Fake.Core.Environment.dll"
+#r @"Fake.Core.FakeVar/lib/netstandard2.0/Fake.Core.FakeVar.dll"
+#r @"Fake.DotNet.MSBuild/lib/netstandard2.0/Fake.DotNet.MSBuild.dll"
+#r @"Fake.IO.FileSystem/lib/netstandard2.0/Fake.IO.FileSystem.dll"
+#r @"Fake.Core.Process/lib/netstandard2.0/Fake.Core.Process.dll"
+#r @"Fake.Tools.Git/lib/netstandard2.0/Fake.Tools.Git.dll"
+#r @"Fake.Core.Target/lib/netstandard2.0/Fake.Core.Target.dll"
+#r @"Fake.Core.SemVer/lib/netstandard2.0/Fake.Core.SemVer.dll"
+#r @"Argu/lib/netstandard2.0/Argu.dll"
 
 #load @"AdditionalSources.fsx"
 #load @"AssemblyResources.fsx"
@@ -82,9 +90,10 @@ module Startup =
             config <- { debug = debug; prerelease = prerelease; verbose = verbose; target = target; args = args }
 
             //Environment.SetEnvironmentVariable("Target", target)
-            Fake.Core.Target.run 1 target []
+            
+            Target.run 1 target []
         with e ->
-            Fake.Core.Target.run 1  "Help" []
+            Target.run 1  "Help" []
 
     module NugetInfo = 
         let defaultValue (fallback : 'a) (o : Option<'a>) =
@@ -174,7 +183,7 @@ module DefaultSetup =
                 //AdditionalSources.paketDependencies.Install(false)
                 AdditionalSources.shellExecutePaket None "install"
 
-            let o (p : MSBuildParams) =
+            let o (p : Fake.DotNet.MSBuildParams) =
                 //let a = typeof<MSBuildDistributedLoggerConfig>.Assembly
                 //let ms = a.GetType("Fake.DotNet.MSBuildExeFromVsWhere", true).GetMethods(Reflection.BindingFlags.Public ||| Reflection.BindingFlags.Static ||| Reflection.BindingFlags.NonPublic)
                 //for m in ms do
@@ -184,9 +193,9 @@ module DefaultSetup =
 
                 //System.Diagnostics.Debugger.Launch() |> ignore
                 //Trace.tracefn "%A" ms
-                { p with Verbosity = Some MSBuildVerbosity.Minimal; ToolsVersion = Some "16.0" }
+                { p with Verbosity = Some Fake.DotNet.MSBuildVerbosity.Minimal; ToolsVersion = Some "16.0" }
 
-            let l = MSBuild.run o "./bin" "Restore" [] [core]
+            let l = Fake.DotNet.MSBuild.run o "./bin" "Restore" [] [core]
 
             //core |> DotNet.msbuild (fun o -> 
             //    { o with MSBuildParams = { o.MSBuildParams with Targets = ["Restore"]} }
@@ -225,8 +234,8 @@ module DefaultSetup =
         Target.create "Compile" (fun _ ->
             let cfg = if config.debug then "Debug" else "Release"
             
-            let o (p : MSBuildParams) =
-                { p with Verbosity = Some MSBuildVerbosity.Minimal; ToolsVersion = Some "16.0" }
+            let o (p : Fake.DotNet.MSBuildParams) =
+                { p with Verbosity = Some Fake.DotNet.MSBuildVerbosity.Minimal; ToolsVersion = Some "16.0" }
 
             let props =
                 [
@@ -234,7 +243,7 @@ module DefaultSetup =
                     if config.debug then
                         yield "SourceLinkCreate", "true"
                 ]
-            let str = MSBuild.run o "" "Build" props [ core ]
+            let str = Fake.DotNet.MSBuild.run o "" "Build" props [ core ]
             ()
             //core |> DotNet.msbuild (fun o ->
             //    { o with

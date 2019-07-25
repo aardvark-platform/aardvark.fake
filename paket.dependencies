@@ -1,8 +1,13 @@
-framework: net45
+framework: netcoreapp2.0
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 
 
-nuget FAKE             ~> 5.8.4
-nuget SourceLink.Fake  ~> 1.1.0
-nuget Mono.Cecil       ~> 0.10.4
+nuget SourceLink.Fake      ~> 1.1.0
+nuget Mono.Cecil           ~> 0.10.4
+nuget Fake.IO.FileSystem   ~> 5.15.4
+nuget Fake.DotNet.MSBuild  ~> 5.15.4
+nuget Fake.Tools.Git       ~> 5.15.4
+nuget Fake.Core.Target     ~> 5.15.4
+nuget Argu                 ~> 5.5.0
+nuget fake-cli             ~> 5.15.4
