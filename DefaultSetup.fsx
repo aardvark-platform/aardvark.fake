@@ -82,9 +82,9 @@ module Startup =
             config <- { debug = debug; prerelease = prerelease; verbose = verbose; target = target; args = args }
 
             //Environment.SetEnvironmentVariable("Target", target)
-            Fake.Core.Target.run 1 target
+            Fake.Core.Target.run 1 target []
         with e ->
-            Fake.Core.Target.run 1  "Help"
+            Fake.Core.Target.run 1  "Help" []
 
     module NugetInfo = 
         let defaultValue (fallback : 'a) (o : Option<'a>) =
