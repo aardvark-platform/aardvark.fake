@@ -18,9 +18,9 @@ open Argu
 open Fake.IO
 open Fake.IO.Globbing.Operators
 open Fake.Tools.Git
-open Fake.DotNet
 open Fake.Core
 open Fake.Core.TargetOperators
+open Fake.DotNet
 
 [<AutoOpen>]
 module Startup =
@@ -173,10 +173,24 @@ module DefaultSetup =
             if not (File.Exists "paket.lock") then
                 //AdditionalSources.paketDependencies.Install(false)
                 AdditionalSources.shellExecutePaket None "install"
-        
-            core |> DotNet.msbuild (fun o -> 
-                { o with MSBuildParams = { o.MSBuildParams with Targets = ["Restore"]} }
-            )
+
+            let o (p : MSBuildParams) =
+                //let a = typeof<MSBuildDistributedLoggerConfig>.Assembly
+                //let ms = a.GetType("Fake.DotNet.MSBuildExeFromVsWhere", true).GetMethods(Reflection.BindingFlags.Public ||| Reflection.BindingFlags.Static ||| Reflection.BindingFlags.NonPublic)
+                //for m in ms do
+                //    if not m.ContainsGenericParameters && m.GetParameters().Length = 0 then
+                //        let res = m.Invoke(null, [||])
+                //        Trace.tracefn "%A: %A" m res
+
+                //System.Diagnostics.Debugger.Launch() |> ignore
+                //Trace.tracefn "%A" ms
+                { p with Verbosity = Some MSBuildVerbosity.Minimal; ToolsVersion = Some "16.0" }
+
+            let l = MSBuild.run o "./bin" "Restore" [] [core]
+
+            //core |> DotNet.msbuild (fun o -> 
+            //    { o with MSBuildParams = { o.MSBuildParams with Targets = ["Restore"]} }
+            //)
 
             AdditionalSources.installSources ()
         )
@@ -210,18 +224,30 @@ module DefaultSetup =
 
         Target.create "Compile" (fun _ ->
             let cfg = if config.debug then "Debug" else "Release"
-            core |> DotNet.msbuild (fun o ->
-                { o with
-                    MSBuildParams = 
-                        { o.MSBuildParams with
-                            Properties = [
-                                yield "Configuration", cfg
-                                if config.debug then
-                                    yield "SourceLinkCreate", "true"
-                            ]
-                        }
-                }
-            )
+            
+            let o (p : MSBuildParams) =
+                { p with Verbosity = Some MSBuildVerbosity.Minimal; ToolsVersion = Some "16.0" }
+
+            let props =
+                [
+                    yield "Configuration", cfg
+                    if config.debug then
+                        yield "SourceLinkCreate", "true"
+                ]
+            let str = MSBuild.run o "" "Build" props [ core ]
+            ()
+            //core |> DotNet.msbuild (fun o ->
+            //    { o with
+            //        MSBuildParams = 
+            //            { o.MSBuildParams with
+            //                Properties = [
+            //                    yield "Configuration", cfg
+            //                    if config.debug then
+            //                        yield "SourceLinkCreate", "true"
+            //                ]
+            //            }
+            //    }
+            //)
         )
 
         Target.create "UpdateBuildScript" (fun _ ->
