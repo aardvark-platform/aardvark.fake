@@ -1,6 +1,6 @@
 RESTRICTION: == net45
 NUGET
   remote: https://api.nuget.org/v3/index.json
-    FAKE (4.63)
-    Mono.Cecil (0.10.0-beta6)
+    FAKE (5.8.4)
+    Mono.Cecil (0.10.4)
     SourceLink.Fake (1.1)

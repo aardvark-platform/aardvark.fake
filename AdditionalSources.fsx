@@ -11,6 +11,10 @@ open System.IO
 open System
 open System.Diagnostics
 open Fake
+open Fake.Core
+open Fake.IO
+open Fake.IO.Globbing.Operators
+open Fake.DotNet
 open System.Text.RegularExpressions
 open System.IO.Compression
 open System.Security.Cryptography
@@ -32,7 +36,7 @@ module PathHelpers =
                 Directory.Delete(d, true)
                 true
             with e -> 
-                traceError (sprintf "could not delete directory %A" d)
+                Trace.traceErrorfn "could not delete directory %A" d
                 false
         else
             true
@@ -40,7 +44,7 @@ module PathHelpers =
     let deleteDir d =
         if Directory.Exists d then
             try Directory.Delete(d, true)
-            with e -> traceError (sprintf "could not delete directory %A" d)
+            with e -> Trace.traceErrorfn "could not delete directory %A" d
 
     let createDir d =
         if not <| Directory.Exists d then
@@ -49,7 +53,7 @@ module PathHelpers =
     let deleteFile f =
         if File.Exists f then
             try File.Delete f
-            with e -> traceError (sprintf "could not delete %A" f)
+            with e -> Trace.traceErrorfn "could not delete %A" f
 
 [<AutoOpen>]
 module IncrediblyUglyHackfulNugetOverride =
@@ -68,7 +72,7 @@ module IncrediblyUglyHackfulNugetOverride =
             let nonEmptyHack = hacks |> Array.filter (fun hack -> hack.Length > 0)
             if Array.isEmpty nonEmptyHack then false
             else
-                tracefn "here are hacked packages: %A" nonEmptyHack
+                Trace.logfn "here are hacked packages: %A" nonEmptyHack
                 true
         else false
 
@@ -76,12 +80,12 @@ module IncrediblyUglyHackfulNugetOverride =
         let hacked = File.ReadAllLines hackedPackagesFile |> HashSet
         for h in hacked |> Seq.toArray do
             try 
-                tracefn "removing hack: %A" h
-                Fake.FileHelper.DeleteDir h 
+                Trace.logfn "removing hack: %A" h
+                Directory.delete h 
                 hacked.Remove h |> ignore
-            with e -> tracefn "could not remove hacked file %A" e
+            with e -> Trace.logfn "could not remove hacked file %A" e
         if hacked.Count = 0 then 
-            tracefn "no hacks remaining. removing hacked file."
+            Trace.logfn "no hacks remaining. removing hacked file."
             File.Delete hackedPackagesFile
         else File.WriteAllLines(hackedPackagesFile, hacked |> Seq.toArray)
 
@@ -115,7 +119,7 @@ module IncrediblyUglyHackfulNugetOverride =
             if hacked.Remove path then
                 File.Delete hackedPackagesFile
                 if hacked.Count = 0 then 
-                    tracefn "no hacks remaining. removing hacked file."
+                    Trace.logfn "no hacks remaining. removing hacked file."
                     File.Delete hackedPackagesFile
                 else File.WriteAllLines(hackedPackagesFile, hacked |> Seq.toArray)
 
@@ -123,30 +127,29 @@ module IncrediblyUglyHackfulNugetOverride =
             if Directory.Exists path then
                 for d in Directory.GetDirectories path do reallyDelete d
                 System.Threading.Thread.Sleep 10
-                try Directory.Delete(path,true) with | :? IOException as e -> tracefn "could not delete. retry"; System.Threading.Thread.Sleep 100; reallyDelete path
+                try Directory.Delete(path,true) with | :? IOException as e -> Trace.logfn "could not delete. retry"; System.Threading.Thread.Sleep 100; reallyDelete path
 
 
         for id in myPackages do
             let names = [ sprintf "bin/%s.%s.nupkg" id tag ]
             for packageName in names do
                 let target = Path.Combine(userProfile,".nuget","packages",id,string tag)
-                let files = Fake.ArchiveHelper.Zip.Extract
                 if removeHacks then    
                     if Directory.Exists target then 
                         printfn "deleting: %s" target
                         reallyDelete target
                         removeHacked target
                 else
-                    tracefn "unzip: %s -> %s" packageName target
+                    Trace.logfn "unzip: %s -> %s" packageName target
                     if not (Directory.Exists target) || Seq.isEmpty (Directory.EnumerateFileSystemEntries(target)) then
-                        traceError "cannot hack non existing project"
+                        Trace.traceError "cannot hack non existing project"
                     else
                         use archive = System.IO.Compression.ZipFile.OpenRead(packageName)
                         let mutable hacked = false
                         for entry in archive.Entries do
                             if entry.Name.EndsWith("dll") then
                                 let entryPath = Path.Combine(target,entry.FullName)
-                                tracefn "extract %s to %s" entry.FullName entryPath 
+                                Trace.logfn "extract %s to %s" entry.FullName entryPath 
                                 entry.ExtractToFile(entryPath,true)
                                 // record that we destroyed integrity of this package
                                 hacked <- true
@@ -154,7 +157,7 @@ module IncrediblyUglyHackfulNugetOverride =
                             addToHacked target
 
         let hackedFiles = File.ReadAllLines hackedPackagesFile
-        tracefn "hacked files: \n%A" hackedFiles
+        Trace.logfn "hacked files: \n%A" hackedFiles
 
 module AdditionalSources =
 
@@ -201,9 +204,7 @@ module AdditionalSources =
 
         match sln with
             | Some sln ->
-                DotNetCli.Restore (fun p ->
-                    { p with Project = sln }
-                )
+                sln |> DotNet.restore id
             | None ->
                 ()
 
@@ -262,7 +263,7 @@ module AdditionalSources =
         let files = !!Path.Combine(folder, "**", "*paket.template") |> Seq.toList
         let ids = files |> List.choose tryReadPackageIdAndVersion
         let tag = 
-            try Git.Information.describe folder
+            try Fake.Tools.Git.Information.describe folder
             with _ -> ""
 
         let m = versionRx.Match tag
@@ -326,11 +327,13 @@ module AdditionalSources =
             let code = 
                 if modTime > cacheTime then
                     if System.Environment.OSVersion.Platform = System.PlatformID.Unix then
-                        shellExec { CommandLine = sprintf "-c \"%s CreatePackage %s\"" "./build.sh" (if debug then "--debug Configuration=Debug" else ""); 
-                                    Program = "/bin/bash"; WorkingDirectory = folder; Args = [] }
+                        Process.shellExec 
+                            { CommandLine = sprintf "-c \"%s CreatePackage %s\"" "./build.sh" (if debug then "--debug Configuration=Debug" else ""); 
+                              Program = "/bin/bash"; WorkingDir = folder; Args = [] }
                     else
-                        shellExec { CommandLine = sprintf "/C %s CreatePackage %s" "build.cmd" (if debug then "--debug Configuration=Debug" else ""); 
-                                    Program = "cmd.exe"; WorkingDirectory = folder; Args = [] }
+                        Process.shellExec 
+                            { CommandLine = sprintf "/C %s CreatePackage %s" "build.cmd" (if debug then "--debug Configuration=Debug" else ""); 
+                              Program = "cmd.exe"; WorkingDir = folder; Args = [] }
                 else
                     0
 
@@ -372,9 +375,9 @@ module AdditionalSources =
                 let installPath = Path.Combine("packages", id)
 
                 if tryDeleteDir installPath && installPackage path then
-                    tracefn "reinstalled %A" id
+                    Trace.logfn "reinstalled %A" id
                 else
-                    traceError <| sprintf "failed to reinstall: %A" id
+                    Trace.traceErrorfn "failed to reinstall: %A" id
 
         File.WriteAllLines(cacheFile, !cacheTimes |> Map.toSeq |> Seq.map (fun (a, time) -> sprintf "%s;%d" a time.Ticks))
 
@@ -384,11 +387,11 @@ module AdditionalSources =
         let folders = folders |> List.filter Directory.Exists
         match folders with
             | [] -> 
-                traceImportant "no sources found"
+                Trace.traceImportant "no sources found"
             | folders ->
                 let taskName = sprintf "adding sources: %A" folders
           
-                traceVerbose "reading sources.lock"
+                Trace.traceVerbose "reading sources.lock"
                 let sourceFolders =
                     if File.Exists sourcesFileName then 
                         File.ReadAllLines sourcesFileName |> Set.ofArray
@@ -397,7 +400,7 @@ module AdditionalSources =
 
                 let newSourceFolders = Set.union (Set.ofList folders) sourceFolders
 
-                traceVerbose "writing to sources.lock"
+                Trace.traceVerbose "writing to sources.lock"
                 File.WriteAllLines(sourcesFileName, newSourceFolders)
 
                 //trace "restoring missing packages"

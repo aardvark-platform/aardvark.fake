@@ -14,6 +14,8 @@ open System.Reflection
 open System.IO
 open System.IO.Compression
 open Fake
+open Fake.Core
+open Fake.IO
 
 [<AutoOpen>]
 module PathHelpersAssembly =
@@ -94,9 +96,9 @@ module AssemblyResources =
                     // create and add the new resource
                     archive.Dispose()
                     mem.Close()
-                    tracefn "archive size: %d bytes" (FileInfo(temp).Length)
+                    Trace.logfn "archive size: %d bytes" (FileInfo(temp).Length)
                     let b = File.ReadAllBytes(temp) //mem.ToArray()
-                    tracefn "archived native dependencies with size: %d bytes" b.Length
+                    Trace.logfn "archived native dependencies with size: %d bytes" b.Length
                     b
                 finally
                     File.Delete(temp)
@@ -123,7 +125,7 @@ module AssemblyResources =
 //                File.Delete pdbPath
 //                File.Move(tempPdb, pdbPath)
 
-            tracefn "added native resources to %A" (Path.GetFileName assemblyPath)
+            Trace.logfn "added native resources to %A" (Path.GetFileName assemblyPath)
 
         )
 
@@ -135,13 +137,13 @@ module AssemblyResources =
         let f = FileInfo source
         if f.Exists then 
             if Directory.Exists dstFolder |> not then Directory.CreateDirectory dstFolder |> ignore
-            CopyFile dstFolder source
+            Shell.copyFile dstFolder source
         else 
             let di = DirectoryInfo source
             if di.Exists then
                 let dst = Path.Combine(dstFolder, di.Name)
                 if Directory.Exists dst |> not then Directory.CreateDirectory dst |> ignore
-                let s = CopyRecursive source dst true 
+                let s = Shell.copyRecursive source dst true 
                 ()
 
     let copyDependencies (folder : string) (targets : seq<string>) =

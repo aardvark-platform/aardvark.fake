@@ -1,4 +1,5 @@
-#I @"../../../../packages/build"
+//#I @"../../../../packages/build/aardvark-platform/aardvark.fake"
+#I @"packages/build/aardvark-platform/aardvark.fake"
 #I @"packages"
 #r @"FAKE/tools/FakeLib.dll"
 #r @"FAKE/tools/Argu.dll"
@@ -8,26 +9,30 @@
 
 namespace Aardvark.Fake
 
-open Fake
 open System
 open System.IO
 open System.Diagnostics
 open System.Text.RegularExpressions
 open Aardvark.Fake
 open Argu
-
+open Fake.IO
+open Fake.IO.Globbing.Operators
+open Fake.Tools.Git
+open Fake.DotNet
+open Fake.Core
+open Fake.Core.TargetOperators
 
 [<AutoOpen>]
 module Startup =
 
     let getGitTag() =
-        let ok,msg,errors = Fake.Git.CommandHelper.runGitCommand "." "describe --abbrev=0"
-        if ok && msg.Count >= 1 then
+        let ok,msg,errors = CommandHelper.runGitCommand "." "describe --abbrev=0"
+        if ok && msg.Length >= 1 then
             let tag = msg.[0]
             tag
         else
             let err = sprintf "no tag: %A" errors
-            traceError err
+            Trace.traceError err
             failwith err
 
     type private Arguments =
@@ -77,13 +82,11 @@ module Startup =
             config <- { debug = debug; prerelease = prerelease; verbose = verbose; target = target; args = args }
 
             //Environment.SetEnvironmentVariable("Target", target)
-            Run target
+            Fake.Core.Target.run 1 target
         with e ->
-            Run "Help"
+            Fake.Core.Target.run 1  "Help"
 
     module NugetInfo = 
-        open SemVerHelper
-
         let defaultValue (fallback : 'a) (o : Option<'a>) =
             match o with    
                 | Some o -> o
@@ -91,37 +94,38 @@ module Startup =
 
         let private adjust (v : PreRelease) =
             let o = 
-                match v.Number with
-                    | Some n -> sprintf "%s%04d" v.Name n
+                let number = v.Values |> List.tryPick  (function PreReleaseSegment.Numeric n -> Some n | _ -> None)
+                match number with
+                    | Some n -> sprintf "%s%04d" v.Name (int n)
                     | None -> v.Name
             { v with
                 Origin = o
-                Parts = [AlphaNumeric o]
+                Values = [AlphaNumeric o]
             }
 
         let nextVersion (major : bool) (prerelease : bool) (v : string) =
-            let v : SemVerInfo = SemVerHelper.parse v
+            let v : SemVerInfo = SemVer.parse v
             let version = 
                 match v.PreRelease with
                     | Some _ when prerelease -> v
                     | Some _ -> { v with PreRelease = None }
                     | _ ->
                         match major with
-                            | false -> { v with Patch = v.Patch + 1 }
-                            | true -> { v with Minor = v.Minor + 1; Patch = 0 }
+                            | false -> { v with Patch = v.Patch + 1u }
+                            | true -> { v with Minor = v.Minor + 1u; Patch = 0u }
 
             if prerelease then
                 let pre = 
                     version.PreRelease |> Option.map (fun p -> 
-                        { p with Number = p.Number |> Option.map (fun v -> v + 1) |> defaultValue 2 |> Some }
+                        let values = p.Values |> List.map  (function PreReleaseSegment.Numeric n -> Numeric (n + bigint 1) | o -> o)
+                        { p with Values = values }
                     )
 
                 let def =
                     {
                         Origin = "prerelease1"
                         Name = "prerelease"
-                        Number = Some 1
-                        Parts = [ AlphaNumeric "prerelease1" ]
+                        Values = [ AlphaNumeric "prerelease"; Numeric (bigint 1) ]
                     }
                 { version with PreRelease = pre |> defaultValue def |> adjust |> Some  }.ToString()
             else
@@ -146,35 +150,38 @@ module DefaultSetup =
     let install(solutionNames : seq<string>) = 
         let core = Seq.head solutionNames
 
-        let vsVersion =
-            match MSBuildHelper.MSBuildDefaults.Properties |> List.tryPick (fun (n,v) -> if n = "VisualStudioVersion" then Some v else None) with
-                | Some vsVersion -> vsVersion
-                | None -> 
-                    let versionRx = System.Text.RegularExpressions.Regex @"\\(?<version>[0-9]+\.[0-9]+)\\bin\\msbuild\.exe$"
-                    let m = versionRx.Match (MSBuildHelper.msBuildExe.ToLower())
-                    if m.Success then
-                        m.Groups.["version"].Value
-                    else
-                        "15.0"
-                        //failwith "could not determine Visual Studio Version"
+        //let vsVersion =
+        //    Fake.DotNet.MSBuild.
+        //    match MSBuildHelper.MSBuildDefaults.Properties |> List.tryPick (fun (n,v) -> if n = "VisualStudioVersion" then Some v else None) with
+        //        | Some vsVersion -> vsVersion
+        //        | None -> 
+        //            let versionRx = System.Text.RegularExpressions.Regex @"\\(?<version>[0-9]+\.[0-9]+)\\bin\\msbuild\.exe$"
+        //            let m = versionRx.Match (MSBuildHelper.msBuildExe.ToLower())
+        //            if m.Success then
+        //                m.Groups.["version"].Value
+        //            else
+        //                "15.0"
+        //                //failwith "could not determine Visual Studio Version"
 
-        Target "Install" (fun () ->
+        Target.create "Install" (fun _ ->
             //AdditionalSources.paketDependencies.Install(false)
             AdditionalSources.shellExecutePaket (Some core) "install"
             AdditionalSources.installSources()
         )
 
-        Target "Restore" (fun () ->
+        Target.create "Restore" (fun _ ->
             if not (File.Exists "paket.lock") then
                 //AdditionalSources.paketDependencies.Install(false)
                 AdditionalSources.shellExecutePaket None "install"
         
-            MSBuild "" "Restore" ["VisualStudioVersion", vsVersion] [core] |> ignore<list<string>>
-            
+            core |> DotNet.msbuild (fun o -> 
+                { o with MSBuildParams = { o.MSBuildParams with Targets = ["Restore"]} }
+            )
+
             AdditionalSources.installSources ()
         )
 
-        Target "Update" (fun () ->
+        Target.create "Update" (fun _ ->
              match config.args with 
               | [] ->  
                 //AdditionalSources.paketDependencies.Update(false)
@@ -188,51 +195,56 @@ module DefaultSetup =
              AdditionalSources.installSources ()
         )
 
-        Target "AddSource" (fun () ->
+        Target.create "AddSource" (fun _ ->
             AdditionalSources.addSources core config.args 
         )
 
-        Target "RemoveSource" (fun () ->
+        Target.create "RemoveSource" (fun _ ->
             AdditionalSources.removeSources core config.args 
         )
 
-        Target "Clean" (fun () ->
-            DeleteDir (Path.Combine("bin", "Release"))
-            DeleteDir (Path.Combine("bin", "Debug"))
+        Target.create "Clean" (fun _ -> 
+            Shell.deleteDir (Path.Combine("bin", "Release"))
+            Shell.deleteDir (Path.Combine("bin", "Debug"))
         )
 
-        Target "Compile" (fun () ->
-            
-            if config.debug then
-                MSBuild "" "Build" ["Configuration", "Debug"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
-            else
-                MSBuild "" "Build" ["Configuration", "Release"; "VisualStudioVersion", vsVersion; "SourceLinkCreate", "true"] [core] |> ignore<list<string>>
+        Target.create "Compile" (fun _ ->
+            let cfg = if config.debug then "Debug" else "Release"
+            core |> DotNet.msbuild (fun o ->
+                { o with
+                    MSBuildParams = 
+                        { o.MSBuildParams with
+                            Properties = [
+                                yield "Configuration", cfg
+                                if config.debug then
+                                    yield "SourceLinkCreate", "true"
+                            ]
+                        }
+                }
+            )
         )
 
-        Target "UpdateBuildScript" (fun () ->
+        Target.create "UpdateBuildScript" (fun _ ->
             //AdditionalSources.paketDependencies.UpdateGroup("Build",false,false,false,false,false,Paket.SemVerUpdateMode.NoRestriction,false)
             AdditionalSources.shellExecutePaket None "update --group Build"
         )
 
-        Target "CreatePackage" (fun () ->
+        Target.create "CreatePackage" (fun _ ->
 
-            let releaseNotes = try Fake.Git.Information.getCurrentHash() |> Some with _ -> None
+            let releaseNotes = try Information.getCurrentHash() |> Some with _ -> None
             if releaseNotes.IsNone then 
                 //traceError "could not grab git status. Possible source: no git, not a git working copy"
                 failwith "could not grab git status. Possible source: no git, not a git working copy"
             else 
-                trace "git appears to work fine."
+                Trace.logfn "git appears to work fine."
     
             let releaseNotes = releaseNotes.Value
-            let branch = try Fake.Git.Information.getBranchName "." with e -> "master"
+            let branch = try Information.getBranchName "." with e -> "master"
 
             let tag = getGitTag()
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
             let command = sprintf "pack bin --pin-project-references --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
             
-            let symbolCommand =
-                command + " --build-config Debug --symbols"
-
             let command = 
                 if config.debug then
                     command + " --build-config Debug"
@@ -243,9 +255,9 @@ module DefaultSetup =
             AdditionalSources.shellExecutePaket None command
         )
 
-        Target "Push" (fun () ->
+        Target.create "Push" (fun _ ->
             if IncrediblyUglyHackfulNugetOverride.isHackActive () then
-                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
+                Trace.traceImportant "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
                 System.Console.ReadLine() |> ignore
 
             let rx = Regex @"(?<url>[^ ]+)[ \t]*(?<keyfile>[^ ]+)"
@@ -258,7 +270,7 @@ module DefaultSetup =
                             if m.Success then
                                 Some (m.Groups.["url"].Value, m.Groups.["keyfile"].Value)
                             else
-                                traceImportant (sprintf "could not parse target: %A" str)
+                                Trace.traceImportant (sprintf "could not parse target: %A" str)
                                 None
                         )
                 else
@@ -268,21 +280,21 @@ module DefaultSetup =
                 targets |> Array.forall (fun (_,keyName) -> File.Exists <| Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", keyName))
 
             let cloneIt dir =
-                tracefn "cloning to: %s" dir
+                Trace.logfn "cloning to: %s" dir
                 try 
-                    Fake.Git.Repository.clone "." "git@github.com:haraldsteinlechner/aardvark-keys.git" dir
+                    Repository.clone "." "git@github.com:haraldsteinlechner/aardvark-keys.git" dir
                     System.Threading.Thread.Sleep 200
                 with e -> 
-                    traceError <| sprintf "could not clone aardvark keys. ask the platform team for assistance... (%A)" e.Message
+                    Trace.traceError <| sprintf "could not clone aardvark keys. ask the platform team for assistance... (%A)" e.Message
 
             if not allOk  then                  // ok let us try to find a key in the intaarnet.
                 let dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys")
                 if Directory.Exists dir then
                     try 
-                        tracefn "pulling: %s" dir
-                        Fake.Git.Branches.pull dir "origin" "master"
+                        Trace.logfn "pulling: %s" dir
+                        Branches.pull dir "origin" "master"
                     with e -> 
-                        tracefn "could not pull keys dir."
+                        Trace.logfn "could not pull keys dir."
                         Directory.Delete(dir,true) |> ignore
                         System.Threading.Thread.Sleep 200
                         cloneIt dir
@@ -315,7 +327,7 @@ module DefaultSetup =
                         let accessKeyPath = Path.Combine(dir, keyName)
                         if File.Exists accessKeyPath then
                             let r = Some (File.ReadAllText accessKeyPath)
-                            tracefn "key: %A" r.Value
+                            Trace.logfn "key: %A" r.Value
                             r
                         else printfn "bad:%s" accessKeyPath; None
 
@@ -324,8 +336,8 @@ module DefaultSetup =
                         | _ -> readKey (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys"))
 
 
-                let branch = Fake.Git.Information.getBranchName "."
-                let releaseNotes = Fake.Git.Information.getCurrentHash()
+                let branch = Information.getBranchName "."
+                let releaseNotes = Information.getCurrentHash()
 
                 let tag = getGitTag()
                 match accessKey with
@@ -334,20 +346,20 @@ module DefaultSetup =
                             for id in myPackages do
                                 let names = [ sprintf "bin/%s.%s.nupkg" id tag ]
                                 for packageName in names do
-                                    tracefn "pushing: %s" packageName
+                                    Trace.logfn "pushing: %s" packageName
                                     //Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
                                     let command = sprintf "push %s --api-key %s --url %s" packageName accessKey target
                                     AdditionalSources.shellExecutePaket None command
                         with e ->
-                            traceError (string e)
+                            Trace.traceError (string e)
                     | None ->
-                        traceError (sprintf "Could not find nuget access key")
+                        Trace.traceError (sprintf "Could not find nuget access key")
         )
 
 
-        Target "PushMinor" (fun () ->
+        Target.create "PushMinor" (fun _ ->
             if IncrediblyUglyHackfulNugetOverride.isHackActive () then
-                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
+                Trace.log "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
                 System.Console.ReadLine() |> ignore
             
             let old = getGitTag()
@@ -355,28 +367,28 @@ module DefaultSetup =
 
             getUserConsentForPush old newVersion
 
-            if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
-                tracefn "created tag %A" newVersion
+            if CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
+                Trace.logfn "created tag %A" newVersion
                 try
-                    Run "Push"
+                    Target.run 1 "Push" []
 
                     try
                         let tag = getGitTag()
-                        Fake.Git.Branches.pushTag "." "origin" newVersion
+                        Branches.pushTag "." "origin" newVersion
                     with e ->
-                        traceError "failed to push tag %A to origin (please push yourself)" 
+                        Trace.traceError "failed to push tag %A to origin (please push yourself)" 
                         raise e
                 with e ->
-                    Fake.Git.Branches.deleteTag "." newVersion
-                    tracefn "deleted tag %A" newVersion
+                    Branches.deleteTag "." newVersion
+                    Trace.logfn "deleted tag %A" newVersion
                     raise e
             else
                 failwithf "could not create tag: %A" newVersion
         )
 
-        Target "PushPre" (fun () ->
+        Target.create "PushPre" (fun _ ->
             if IncrediblyUglyHackfulNugetOverride.isHackActive () then
-                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
+                Trace.log "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
                 System.Console.ReadLine() |> ignore
 
             let old = getGitTag()
@@ -384,29 +396,29 @@ module DefaultSetup =
 
             getUserConsentForPush old newVersion
 
-            if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
-                tracefn "created tag %A" newVersion
+            if CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
+                Trace.logfn "created tag %A" newVersion
                 try
-                    Run "Push"
+                    Target.run 1 "Push" []
 
                     try
                         let tag = getGitTag()
-                        Fake.Git.Branches.pushTag "." "origin" newVersion
+                        Branches.pushTag "." "origin" newVersion
                     with e ->
-                        traceError "failed to push tag %A to origin (please push yourself)" 
+                        Trace.traceError "failed to push tag %A to origin (please push yourself)" 
                         raise e
                 with e ->
-                    Fake.Git.Branches.deleteTag "." newVersion
-                    tracefn "deleted tag %A" newVersion
+                    Branches.deleteTag "." newVersion
+                    Trace.logfn "deleted tag %A" newVersion
                     raise e
             else
                 failwithf "could not create tag: %A" newVersion
         )
 
         
-        Target "PushMajor" (fun () ->
+        Target.create "PushMajor" (fun _ ->
             if IncrediblyUglyHackfulNugetOverride.isHackActive () then
-                trace "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
+                Trace.log "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
                 System.Console.ReadLine() |> ignore
 
             let old = getGitTag()
@@ -414,27 +426,27 @@ module DefaultSetup =
 
             getUserConsentForPush old newVersion
 
-            if Fake.Git.CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
-                tracefn "created tag %A" newVersion
+            if CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
+                Trace.logfn "created tag %A" newVersion
             
                 try
-                    Run "Push"
+                    Target.run 1 "Push" []
 
                     try
                         let tag = getGitTag()
-                        Fake.Git.Branches.pushTag "." "origin" newVersion
+                        Branches.pushTag "." "origin" newVersion
                     with e ->
-                        traceError "failed to push tag %A to origin (please push yourself)" 
+                        Trace.traceError "failed to push tag %A to origin (please push yourself)" 
                         raise e
                 with e ->
-                    Fake.Git.Branches.deleteTag "." newVersion
-                    tracefn "deleted tag %A" newVersion
+                    Branches.deleteTag "." newVersion
+                    Trace.logfn "deleted tag %A" newVersion
                     raise e
             else
                 failwithf "could not create tag: %A" newVersion
         )
 
-        Target "AddNativeResources" (fun () ->
+        Target.create "AddNativeResources" (fun _ ->
             let dir =
                if Directory.Exists "libs/Native" then Some "libs/Native"
                elif Directory.Exists "lib/Native" then Some "lib/Native"
@@ -467,15 +479,15 @@ module DefaultSetup =
                     ()
         )
 
-        Target "OverrideGlobalPackages" (fun () ->
+        Target.create "OverrideGlobalPackages" (fun _ ->
             IncrediblyUglyHackfulNugetOverride.copyToGlobal getGitTag false 
         )
 
-        Target "RevertGlobalPackages" (fun () ->
+        Target.create "RevertGlobalPackages" (fun _ ->
             IncrediblyUglyHackfulNugetOverride.copyToGlobal getGitTag true 
         )
 
-        Target "Help" (fun () ->
+        Target.create "Help" (fun _ ->
             let defColor = Console.ForegroundColor
             let highlightColor = ConsoleColor.Yellow
             printfn "aardvark build script"
@@ -576,7 +588,9 @@ module DefaultSetup =
 
         )
 
-        Target "Default" DoNothing
+        
+
+        Target.create "Default" ignore
 
 
         "Restore" ==> "Compile" |> ignore
