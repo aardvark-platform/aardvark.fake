@@ -214,11 +214,21 @@ module DefaultSetup =
             let o (p : Fake.DotNet.MSBuildParams) =
                 { p with Verbosity = Some Fake.DotNet.MSBuildVerbosity.Minimal }
 
+            let tag = 
+                try getGitTag() |> Some
+                with _ -> None
+
             let props =
                 [
                     yield "Configuration", cfg
                     if config.debug then
                         yield "SourceLinkCreate", "true"
+                    match tag with
+                    | Some tag -> 
+                        yield "AssemblyVersion", tag
+                        yield "AssemblyFileVersion", tag
+                        yield "PackageVersion", tag
+                    | _ -> ()
                 ]
             Fake.DotNet.MSBuild.run o "" "Build" props [ core ] |> ignore
         )
