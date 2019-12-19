@@ -9,7 +9,8 @@ nuget Fake.Tools.Git                 ~> 5.19.0
 nuget Fake.Core.Target               ~> 5.19.0
 nuget Argu                           ~> 5.5.0
 nuget System.IO.Compression.ZipFile  ~> 4.3.0
-nuget fake-cli                       ~> 5.15.4           
+nuget fake-cli                       ~> 5.19.0     
+
 group Build
 framework: netstandard2.0
 source https://api.nuget.org/v3/index.json
@@ -22,4 +23,4 @@ nuget Fake.Tools.Git                 ~> 5.19.0
 nuget Fake.Core.Target               ~> 5.19.0
 nuget Argu                           ~> 5.5.0
 nuget System.IO.Compression.ZipFile  ~> 4.3.0
-nuget fake-cli                       ~> 5.15.4     
+nuget fake-cli                       ~> 5.19.0
