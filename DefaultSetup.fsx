@@ -131,6 +131,11 @@ module Startup =
             else
                 { version with PreRelease = None}.ToString()
 
+        let assemblyVersion (vstr : string) =
+            let v : SemVerInfo = SemVer.parse vstr
+            sprintf "%d.%d.0.0" v.Major v.Minor
+            
+
 
 module DefaultSetup =
 
@@ -225,8 +230,11 @@ module DefaultSetup =
                         yield "SourceLinkCreate", "true"
                     match tag with
                     | Some tag -> 
-                        yield "AssemblyVersion", tag
-                        yield "AssemblyFileVersion", tag
+                        let assemblyVersion = NugetInfo.assemblyVersion tag
+                        yield "AssemblyVersion", assemblyVersion
+                        yield "AssemblyFileVersion", assemblyVersion
+                        yield "InformationalVersion", assemblyVersion
+                        yield "ProductVersion", assemblyVersion
                         yield "PackageVersion", tag
                     | _ -> ()
                 ]
@@ -606,6 +614,6 @@ module DefaultSetup =
         "CreatePackage" ==> "OverrideGlobalPackages" |> ignore
 
         "CreatePackage" ==> "Push" |> ignore
-        "Compile" ==> "PushMinor" |> ignore
-        "Compile" ==> "PushMajor" |> ignore
-        "Compile" ==> "PushPre" |> ignore
+        //"PushMinor" |> ignore
+        //"PushMajor" |> ignore
+        //"PushPre" |> ignore
