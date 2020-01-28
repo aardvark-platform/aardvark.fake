@@ -157,7 +157,7 @@ module IncrediblyUglyHackfulNugetOverride =
 
 module AdditionalSources =
 
-    do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"../../../../")
+    //do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"../../../../")
     
     open System.Runtime.InteropServices
 
@@ -168,10 +168,12 @@ module AdditionalSources =
             if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then @".paket/paket.exe"
             else ".paket/paket"
 
+        let paketPath = System.IO.Path.GetFullPath paketPath
+
         if File.Exists paketPath |> not then printf "%s is not available!" paketPath
 
         let startInfo = new ProcessStartInfo()
-        startInfo.FileName <- tool
+        startInfo.FileName <- paketPath
         startInfo.Arguments <- args
         startInfo.UseShellExecute <- false
         startInfo.CreateNoWindow <- true
