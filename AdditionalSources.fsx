@@ -159,16 +159,16 @@ module AdditionalSources =
 
     do Environment.CurrentDirectory <- System.IO.Path.Combine(__SOURCE_DIRECTORY__,@"../../../../")
     
-    let shellExecutePaket _sln args =
-// possible way to active detailed output...
-//        let args = 
-//            if verbose then
-//                String.concat " " [| args; "--verbose" |]
-//            else
-//                args
-        let paketPath = @".paket/paket.exe"
+    open System.Runtime.InteropServices
 
-        if File.Exists paketPath |> not then printf ".packet\paket.exe is not available!"
+
+    let shellExecutePaket _sln args =
+
+        let paketPath = 
+            if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then @".paket/paket.exe"
+            else ".paket/paket"
+
+        if File.Exists paketPath |> not then printf "%s is not available!" paketPath
 
         let tool, args = 
             match System.Environment.OSVersion.Platform with
