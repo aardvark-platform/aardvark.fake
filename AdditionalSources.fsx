@@ -170,11 +170,6 @@ module AdditionalSources =
 
         if File.Exists paketPath |> not then printf "%s is not available!" paketPath
 
-        let tool, args = 
-            match System.Environment.OSVersion.Platform with
-                | PlatformID.Unix | PlatformID.MacOSX -> "mono", paketPath + " " + args
-                | _ -> paketPath, args
-
         let startInfo = new ProcessStartInfo()
         startInfo.FileName <- tool
         startInfo.Arguments <- args
