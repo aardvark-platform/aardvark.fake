@@ -11,6 +11,7 @@ open System.IO.Compression
 open Fake
 open Fake.Core
 open Fake.IO
+open System.Runtime.InteropServices
 
 [<AutoOpen>]
 module PathHelpersAssembly =
@@ -143,15 +144,17 @@ module AssemblyResources =
 
     let copyDependencies (folder : string) (targets : seq<string>) =
         let arch = 
-            "AMD64" // developer machines are assumed to be 64 bit machines
-            
+            match RuntimeInformation.OSArchitecture with
+            | Architecture.X64 -> "AMD64"
+            | Architecture.X86 -> "x86"
+            | _ -> "unknown"
         let targets = targets |> Seq.toArray
 
         let platform =
-            match Environment.OSVersion.Platform with
-                | PlatformID.MacOSX -> "mac"
-                | PlatformID.Unix -> "linux"
-                | _ -> "windows"
+            if RuntimeInformation.IsOSPlatform OSPlatform.Windows then "windows"
+            elif RuntimeInformation.IsOSPlatform OSPlatform.OSX then "mac"
+            elif RuntimeInformation.IsOSPlatform OSPlatform.Linux then "linux"
+            else "windows"
 
         for t in targets do
             getFilesAndFolders(Path.Combine(folder, platform, arch)) 

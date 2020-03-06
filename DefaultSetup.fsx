@@ -463,14 +463,28 @@ module DefaultSetup =
                elif Directory.Exists "lib/Native" then Some "lib/Native"
                else None
 
+            let dirs (dir : string) (pat : string) (o : SearchOption) =
+                if Directory.Exists dir then
+                    let rx = System.Text.RegularExpressions.Regex pat
+                    Directory.GetDirectories(dir, "*", o) 
+                    |> Array.filter (Path.GetFileName >> rx.IsMatch)
+                    |> Array.map Path.GetFullPath
+                else
+                    [||]   
+
+            let files (dir : string) (pat : string) (o : SearchOption) =
+                if Directory.Exists dir then
+                    let rx = System.Text.RegularExpressions.Regex pat
+                    Directory.GetFiles(dir, "*", o) 
+                    |> Array.filter (Path.GetFileName >> rx.IsMatch)
+                    |> Array.map Path.GetFullPath
+                else
+                    [||]                
+
+
             let binDirs =
-                "bin/Release" :: "bin/Debug" :: (
-                    Directory.GetDirectories("bin", "*", SearchOption.AllDirectories)
-                    |> Array.filter (fun d ->
-                        let n = Path.GetFileName(d).ToLower()
-                        n.StartsWith "netcoreapp" ||
-                        n.StartsWith "net4" 
-                    )
+                (
+                    dirs "bin" "(^netcoreapp.*$)|(^net4.*$)|^Debug$|^Release$" SearchOption.AllDirectories
                     |> Array.toList
                 )
 
@@ -484,12 +498,11 @@ module DefaultSetup =
 
                         let paths = 
                             Array.concat [
-                                Directory.GetFiles("bin/Release", n + ".*", SearchOption.AllDirectories)  
-                                Directory.GetFiles("bin/Debug", n + ".*", SearchOption.AllDirectories)  
+                                files "bin/Release" (@"^.*\.(dll|exe)$") SearchOption.AllDirectories
+                                files "bin/Debug" (@"^.*\.(dll|exe)$") SearchOption.AllDirectories
                             ]                        
                             |> Array.filter (fun p -> 
-                                let e = Path.GetExtension(p).ToLower()
-                                e = ".exe" || e = ".dll"
+                                Path.GetFileNameWithoutExtension(p).ToLower() = n.ToLower()
                             )
 
                         AssemblyResources.copyDependencies d binDirs
