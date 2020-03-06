@@ -456,31 +456,43 @@ module DefaultSetup =
                 failwithf "could not create tag: %A" newVersion
         )
 
+
         Target.create "AddNativeResources" (fun _ ->
             let dir =
                if Directory.Exists "libs/Native" then Some "libs/Native"
                elif Directory.Exists "lib/Native" then Some "lib/Native"
                else None
 
+            let binDirs =
+                "bin/Release" :: "bin/Debug" :: (
+                    Directory.GetDirectories("bin", "*", SearchOption.AllDirectories)
+                    |> Array.filter (fun d ->
+                        let n = Path.GetFileName(d).ToLower()
+                        n.StartsWith "netcoreapp" ||
+                        n.StartsWith "net4" 
+                    )
+                    |> Array.toList
+                )
+
+
+
             match dir with
                 | Some dir ->
-                    let dirs = Directory.GetDirectories dir
-                    for d in dirs do
+                    for d in Directory.GetDirectories dir do
                         let n = Path.GetFileName d
                         let d = d |> Path.GetFullPath
 
-                        let paths = [
-                            Path.Combine("bin/Release/netstandard2.0", n + ".dll") |> Path.GetFullPath
-                            Path.Combine("bin/Release/netcoreapp2.0", n + ".exe") |> Path.GetFullPath
-                            Path.Combine("bin/Debug/netstandard2.0", n + ".dll") |> Path.GetFullPath
-                            Path.Combine("bin/Debug/netcoreapp2.0", n + ".exe") |> Path.GetFullPath
-                            Path.Combine("bin/Release", n + ".dll") |> Path.GetFullPath
-                            Path.Combine("bin/Release", n + ".exe") |> Path.GetFullPath
-                            Path.Combine("bin/Debug", n + ".dll") |> Path.GetFullPath
-                            Path.Combine("bin/Debug", n + ".exe") |> Path.GetFullPath
-                        ]
+                        let paths = 
+                            Array.concat [
+                                Directory.GetFiles("bin/Release", n + ".*", SearchOption.AllDirectories)  
+                                Directory.GetFiles("bin/Debug", n + ".*", SearchOption.AllDirectories)  
+                            ]                        
+                            |> Array.filter (fun p -> 
+                                let e = Path.GetExtension(p).ToLower()
+                                e = ".exe" || e = ".dll"
+                            )
 
-                        AssemblyResources.copyDependencies d ["bin/Release"; "bin/Debug"; "bin/Debug/netcoreapp2.0"; "bin/Release/netcoreapp2.0"]
+                        AssemblyResources.copyDependencies d binDirs
 
                         for p in paths do
                             if File.Exists p then
