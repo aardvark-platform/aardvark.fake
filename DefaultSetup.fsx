@@ -178,7 +178,9 @@ module DefaultSetup =
             if not (File.Exists "paket.lock") then
                 AdditionalSources.shellExecutePaket None "install"
 
-            core |> DotNet.restore id
+            core |> DotNet.restore (fun o ->
+                { o with MSBuildParams = { o.MSBuildParams with DisableInternalBinLog = true }}
+            )
             //Fake.DotNet.MSBuild.run o "./bin" "Restore" [] [core] |> ignore
 
             AdditionalSources.installSources ()
@@ -242,6 +244,7 @@ module DefaultSetup =
                     MSBuildParams =
                         { o.MSBuildParams with
                             Properties = props
+                            DisableInternalBinLog = true
                         }
                 }
             )
