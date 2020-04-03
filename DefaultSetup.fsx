@@ -178,10 +178,8 @@ module DefaultSetup =
             if not (File.Exists "paket.lock") then
                 AdditionalSources.shellExecutePaket None "install"
 
-            let o (p : Fake.DotNet.MSBuildParams) =
-                { p with Verbosity = Some Fake.DotNet.MSBuildVerbosity.Minimal }
-
-            Fake.DotNet.MSBuild.run o "./bin" "Restore" [] [core] |> ignore
+            core |> DotNet.restore id
+            //Fake.DotNet.MSBuild.run o "./bin" "Restore" [] [core] |> ignore
 
             AdditionalSources.installSources ()
         )
@@ -226,8 +224,6 @@ module DefaultSetup =
             let props =
                 [
                     yield "Configuration", cfg
-                    if config.debug then
-                        yield "SourceLinkCreate", "true"
                     match tag with
                     | Some tag -> 
                         let assemblyVersion = NugetInfo.assemblyVersion tag
@@ -238,7 +234,17 @@ module DefaultSetup =
                         yield "PackageVersion", tag
                     | _ -> ()
                 ]
-            Fake.DotNet.MSBuild.run o "" "Build" props [ core ] |> ignore
+
+            core |> DotNet.build (fun o ->
+                { o with
+                    NoRestore = true 
+                    Configuration = if config.debug then DotNet.BuildConfiguration.Debug else DotNet.BuildConfiguration.Release
+                    MSBuildParams =
+                        { o.MSBuildParams with
+                            Properties = props
+                        }
+                }
+            )
         )
 
         Target.create "UpdateBuildScript" (fun _ ->

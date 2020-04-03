@@ -4,6 +4,7 @@ source https://api.nuget.org/v3/index.json
 nuget SourceLink.Fake                ~> 1.1.0
 nuget Mono.Cecil                     ~> 0.10.4
 nuget Fake.IO.FileSystem             ~> 5.19.0
+nuget Fake.DotNet.Cli                ~> 5.19.0
 nuget Fake.DotNet.MSBuild            ~> 5.19.0
 nuget Fake.Tools.Git                 ~> 5.19.0
 nuget Fake.Core.Target               ~> 5.19.0
@@ -18,6 +19,7 @@ source https://api.nuget.org/v3/index.json
 nuget SourceLink.Fake                ~> 1.1.0
 nuget Mono.Cecil                     ~> 0.10.4
 nuget Fake.IO.FileSystem             ~> 5.19.0
+nuget Fake.DotNet.Cli                ~> 5.19.0
 nuget Fake.DotNet.MSBuild            ~> 5.19.0
 nuget Fake.Tools.Git                 ~> 5.19.0
 nuget Fake.Core.Target               ~> 5.19.0
