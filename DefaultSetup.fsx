@@ -265,7 +265,7 @@ module DefaultSetup =
 
             let tag = getGitTag()
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
-            let command = sprintf "pack bin --interproject-references --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
+            let command = sprintf "pack bin --interproject-references fix --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
             
             let command = 
                 if config.debug then
