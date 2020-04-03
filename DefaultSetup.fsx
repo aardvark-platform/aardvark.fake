@@ -216,9 +216,6 @@ module DefaultSetup =
         Target.create "Compile" (fun _ ->
             let cfg = if config.debug then "Debug" else "Release"
             
-            let o (p : Fake.DotNet.MSBuildParams) =
-                { p with Verbosity = Some Fake.DotNet.MSBuildVerbosity.Minimal }
-
             let tag = 
                 try getGitTag() |> Some
                 with _ -> None
@@ -268,7 +265,7 @@ module DefaultSetup =
 
             let tag = getGitTag()
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
-            let command = sprintf "pack bin --pin-project-references --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
+            let command = sprintf "pack bin --interproject-references --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
             
             let command = 
                 if config.debug then
