@@ -152,8 +152,9 @@ module IncrediblyUglyHackfulNugetOverride =
                         if hacked then  
                             addToHacked target
 
-        let hackedFiles = File.ReadAllLines hackedPackagesFile
-        Trace.logfn "hacked files: \n%A" hackedFiles
+        if File.Exists hackedPackagesFile then
+            let hackedFiles = File.ReadAllLines hackedPackagesFile
+            Trace.logfn "hacked files: \n%A" hackedFiles
 
 module AdditionalSources =
 
