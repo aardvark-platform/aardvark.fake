@@ -115,10 +115,27 @@ module Startup =
 
 
             if prerelease then
+                let incrementPreRelease (s : PreReleaseSegment) =
+                    let prefix = "prerelease"
+
+                    let increment (number : string) =
+                        match Int32.TryParse number with
+                        | true, n -> Some <| bigint (n + 1)
+                        | _ -> None
+
+                    match s with
+                    | Numeric n -> Numeric (n + bigint 1)
+                    | AlphaNumeric str as o ->
+                        if str.StartsWith prefix then
+                            increment (str.Substring prefix.Length)
+                            |> Option.map Numeric
+                            |> Option.defaultValue o
+                        else
+                            o
+
                 let pre = 
-                    version.PreRelease |> Option.map (fun p -> 
-                        let values = p.Values |> List.map  (function PreReleaseSegment.Numeric n -> Numeric (n + bigint 1) | o -> o)
-                        { p with Values = values }
+                    version.PreRelease |> Option.map (fun p ->
+                        { p with Values = p.Values |> List.map incrementPreRelease }
                     )
 
                 let def =
