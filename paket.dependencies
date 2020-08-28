@@ -26,3 +26,4 @@ nuget Fake.Core.Target               ~> 5.20.1
 nuget Argu                           ~> 5.5.0
 nuget System.IO.Compression.ZipFile  ~> 4.3.0
 nuget fake-cli                       ~> 5.20.1 
+nuget System.Security.Cryptography.Cng ~> 4.7.0
