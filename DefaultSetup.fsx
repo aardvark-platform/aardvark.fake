@@ -236,7 +236,7 @@ module DefaultSetup =
             let tag = 
                 try 
                     let tag = getGitTag()
-                    let assemblyVersion = NugetInfo.assemblyVersion getGitTag
+                    let assemblyVersion = NugetInfo.assemblyVersion tag
                     Some (tag, assemblyVersion)
                 with _ -> None
 
