@@ -233,15 +233,15 @@ module DefaultSetup =
         Target.create "Compile" (fun _ ->
             let cfg = if config.debug then "Debug" else "Release"
             
-            let assemblyVersion = 
-                try NugetInfo.assemblyVersion (getGitTag()) |> Some
+            let tag = 
+                try let tag = getGitTag() in NugetInfo.assemblyVersion tag, tag |> Some
                 with _ -> None
 
             let props =
                 [
                     yield "Configuration", cfg
-                    match assemblyVersion with
-                    | Some assemblyVersion -> 
+                    match tag with
+                    | Some (assemblyVersion, tag) -> 
                         yield "AssemblyVersion", assemblyVersion
                         yield "AssemblyFileVersion", assemblyVersion
                         yield "InformationalVersion", assemblyVersion
