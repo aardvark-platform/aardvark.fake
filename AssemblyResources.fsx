@@ -175,3 +175,102 @@ module AssemblyResources =
                     )
                 |> Seq.iter (copy t)
 
+    /// removes the native dependencies of the given assembly
+    /// NOTE: only tested for the windows platform
+    let removeNative (assemblyPath : string) =
+        
+        try
+            let pdbPath = Path.ChangeExtension(assemblyPath, "pdb")
+            let symbols = 
+                // only process symbols if they exist and we are on not on unix like systems (they use mono symbols). 
+                // this means: at the moment only windows packages support pdb debugging.
+                File.Exists (pdbPath) && System.Environment.OSVersion.Platform <> PlatformID.Unix
+
+            let bytes = new MemoryStream(File.ReadAllBytes assemblyPath)
+
+            let pdbStream =
+                if symbols then
+                    new MemoryStream(File.ReadAllBytes pdbPath)
+                else
+                    null
+
+            let r = ReaderParameters()
+            if symbols then
+                r.SymbolReaderProvider <- Mono.Cecil.Pdb.PdbReaderProvider()
+                r.SymbolStream <- pdbStream
+                r.ReadSymbols <- symbols
+            use a = AssemblyDefinition.ReadAssembly(bytes,r)
+
+            // remove the native.zip from assembly resources
+            let res = a.MainModule.Resources |> Seq.tryFind (fun r -> r.Name = "native.zip")
+            match res with
+                | Some res -> 
+                    a.MainModule.Resources.Remove res |> ignore
+                
+                    // write new assembly
+                    a.Write(assemblyPath, WriterParameters(WriteSymbols = symbols))
+
+                    tracefn "removed native dependencies from %A" (Path.GetFileName assemblyPath)
+
+                | None -> ()
+
+        with 
+            | :? BadImageFormatException -> tracefn "error: binary format of %s unsupported" (Path.GetFileName assemblyPath)
+
+
+    /// extract native dependencies of an assembly for a certain plattform
+    /// NOTE: only tested for the windows platform
+    let extractNative (assemblyPath : string) (plattform : string) (architecture : string) =
+       
+        try
+            use a = AssemblyDefinition.ReadAssembly(assemblyPath)
+
+            // try find the native.zip archive
+            let res = a.MainModule.Resources |> Seq.tryFind (fun r -> r.Name = "native.zip")
+            match res with
+                | Some res -> 
+                    match res with
+                    | :? EmbeddedResource as res ->
+                    
+                        let srcPath = plattform + "\\" + architecture + "\\"
+                        let dstDir = Path.GetDirectoryName assemblyPath
+
+                        use zip = new ZipArchive(res.GetResourceStream(), ZipArchiveMode.Read)
+
+                        for e in zip.Entries do
+                            if e.FullName.StartsWith srcPath then
+                                 
+                                let fileName = e.FullName.Substring(srcPath.Length)
+                                let dstFile = Path.Combine(dstDir, fileName)
+
+                                if File.Exists dstFile then
+                                    tracefn "warn: file %s already exists" fileName
+                                else
+                                    tracefn "extracing %s" fileName
+                                    e.ExtractToFile(dstFile)
+
+
+                        tracefn "extracted native resources of %A %s" (Path.GetFileName assemblyPath) plattform
+                    | _ -> ()
+                
+                | None -> ()
+
+            with 
+                | :? BadImageFormatException -> tracefn "error: binary format of %s unsupported" (Path.GetFileName assemblyPath)
+
+
+
+    /// extract native binaries for the specified plattform and removes the embedded archive from the assemblies
+    /// NOTE: only tested for the windows platform
+    let extractNativeForDelopy (binDirectory : string) (plattform : string) (architecture : string) =
+        
+        for file in Directory.EnumerateFiles(binDirectory) do
+            let ext = Path.GetExtension file
+            if ext.EndsWith(".dll") || ext.EndsWith(".exe") then
+                tracefn "processing %s" (Path.GetFileName file)
+                try
+                    extractNative file plattform architecture
+                    removeNative file
+                with e ->
+                    tracefn "error processing %s: %A" (Path.GetFileName file) e
+
