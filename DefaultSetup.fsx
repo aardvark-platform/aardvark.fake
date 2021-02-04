@@ -17,18 +17,16 @@ open Fake.Core
 open Fake.Core.TargetOperators
 open Fake.DotNet
 
+
 [<AutoOpen>]
 module Startup =
 
-    let getGitTag() =
-        let ok,msg,errors = CommandHelper.runGitCommand "." "describe --abbrev=0"
-        if ok && msg.Length >= 1 then
-            let tag = msg.[0]
-            tag
-        else
-            let err = sprintf "no tag: %A" errors
-            Trace.traceError err
-            failwith err
+    let notes = ReleaseNotes.load "RELEASE_NOTES.md"
+    let getVersion() =
+        notes.NugetVersion
+
+    let getReleaseNotes() =
+        notes.Notes |> String.concat System.Environment.NewLine
 
     type private Arguments =
         | Debug
@@ -156,6 +154,8 @@ module Startup =
 
 module DefaultSetup =
 
+    let mutable verbosity = Some Fake.DotNet.MSBuildVerbosity.Minimal
+
     let packageNameRx = Regex @"^(?<name>[a-zA-Z_0-9\.-]+?)\.(?<version>([0-9]+\.)*[0-9]+)(.*?)\.nupkg$"
 
     let getUserConsentForPush (oldVersion : string) (newVersion : string) =
@@ -195,7 +195,7 @@ module DefaultSetup =
             if not (File.Exists "paket.lock") then
                 AdditionalSources.shellExecutePaket None "install"
 
-            core |> DotNet.restore (fun o ->
+            core |> Fake.DotNet.DotNet.restore (fun o ->
                 { o with MSBuildParams = { o.MSBuildParams with DisableInternalBinLog = true }}
             )
             //Fake.DotNet.MSBuild.run o "./bin" "Restore" [] [core] |> ignore
@@ -235,7 +235,7 @@ module DefaultSetup =
             
             let tag = 
                 try 
-                    let tag = getGitTag()
+                    let tag = getVersion()
                     let assemblyVersion = NugetInfo.assemblyVersion tag
                     Some (tag, assemblyVersion)
                 with _ -> None
@@ -253,14 +253,15 @@ module DefaultSetup =
                     | _ -> ()
                 ]
 
-            core |> DotNet.build (fun o ->
+            core |> Fake.DotNet.DotNet.build (fun o ->
                 { o with
                     NoRestore = true 
-                    Configuration = if config.debug then DotNet.BuildConfiguration.Debug else DotNet.BuildConfiguration.Release
+                    Configuration = if config.debug then Fake.DotNet.DotNet.BuildConfiguration.Debug else Fake.DotNet.DotNet.BuildConfiguration.Release
                     MSBuildParams =
                         { o.MSBuildParams with
                             Properties = props
                             DisableInternalBinLog = true
+                            Verbosity = verbosity
                         }
                 }
             )
@@ -273,18 +274,9 @@ module DefaultSetup =
 
         Target.create "CreatePackage" (fun _ ->
 
-            let releaseNotes = try Information.getCurrentHash() |> Some with _ -> None
-            if releaseNotes.IsNone then 
-                //traceError "could not grab git status. Possible source: no git, not a git working copy"
-                failwith "could not grab git status. Possible source: no git, not a git working copy"
-            else 
-                Trace.logfn "git appears to work fine."
-    
-            let releaseNotes = releaseNotes.Value
-
-            let tag = getGitTag()
+            let tag = getVersion()
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
-            let command = sprintf "pack bin --interproject-references fix --build-platform AnyCPU --version %s --release-notes %s" tag releaseNotes
+            let command = sprintf "pack bin --interproject-references fix --build-platform AnyCPU --version %s --release-notes %s" tag (getReleaseNotes())
             
             let command = 
                 if config.debug then
@@ -377,7 +369,7 @@ module DefaultSetup =
                         | _ -> readKey (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys"))
 
 
-                let tag = getGitTag()
+                let tag = getVersion()
                 match accessKey with
                     | Some accessKey ->
                         try
@@ -393,94 +385,6 @@ module DefaultSetup =
                     | None ->
                         Trace.traceError (sprintf "Could not find nuget access key")
         )
-
-
-        Target.create "PushMinor" (fun _ ->
-            if IncrediblyUglyHackfulNugetOverride.isHackActive () then
-                Trace.log "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
-                System.Console.ReadLine() |> ignore
-            
-            let old = getGitTag()
-            let newVersion = NugetInfo.nextVersion false config.prerelease old
-
-            getUserConsentForPush old newVersion
-
-            if CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
-                Trace.logfn "created tag %A" newVersion
-                try
-                    Target.run 1 "Push" []
-
-                    try
-                        Branches.pushTag "." "origin" newVersion
-                    with e ->
-                        Trace.traceError "failed to push tag %A to origin (please push yourself)" 
-                        raise e
-                with e ->
-                    Branches.deleteTag "." newVersion
-                    Trace.logfn "deleted tag %A" newVersion
-                    raise e
-            else
-                failwithf "could not create tag: %A" newVersion
-        )
-
-        Target.create "PushPre" (fun _ ->
-            if IncrediblyUglyHackfulNugetOverride.isHackActive () then
-                Trace.log "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
-                System.Console.ReadLine() |> ignore
-
-            let old = getGitTag()
-            let newVersion = NugetInfo.nextVersion false true old
-
-            getUserConsentForPush old newVersion
-
-            if CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
-                Trace.logfn "created tag %A" newVersion
-                try
-                    Target.run 1 "Push" []
-
-                    try
-                        Branches.pushTag "." "origin" newVersion
-                    with e ->
-                        Trace.traceError "failed to push tag %A to origin (please push yourself)" 
-                        raise e
-                with e ->
-                    Branches.deleteTag "." newVersion
-                    Trace.logfn "deleted tag %A" newVersion
-                    raise e
-            else
-                failwithf "could not create tag: %A" newVersion
-        )
-
-        
-        Target.create "PushMajor" (fun _ ->
-            if IncrediblyUglyHackfulNugetOverride.isHackActive () then
-                Trace.log "there are hacked packages in your global nuget folder. If you continue you are really hateful. Press any key to destroy all packages and deal with method not founds all the way!"
-                System.Console.ReadLine() |> ignore
-
-            let old = getGitTag()
-            let newVersion = NugetInfo.nextVersion true config.prerelease old
-
-            getUserConsentForPush old newVersion
-
-            if CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
-                Trace.logfn "created tag %A" newVersion
-            
-                try
-                    Target.run 1 "Push" []
-
-                    try
-                        Branches.pushTag "." "origin" newVersion
-                    with e ->
-                        Trace.traceError "failed to push tag %A to origin (please push yourself)" 
-                        raise e
-                with e ->
-                    Branches.deleteTag "." newVersion
-                    Trace.logfn "deleted tag %A" newVersion
-                    raise e
-            else
-                failwithf "could not create tag: %A" newVersion
-        )
-
 
         Target.create "AddNativeResources" (fun _ ->
             let dir =
@@ -540,11 +444,11 @@ module DefaultSetup =
         )
 
         Target.create "OverrideGlobalPackages" (fun _ ->
-            IncrediblyUglyHackfulNugetOverride.copyToGlobal getGitTag false 
+            IncrediblyUglyHackfulNugetOverride.copyToGlobal getVersion false 
         )
 
         Target.create "RevertGlobalPackages" (fun _ ->
-            IncrediblyUglyHackfulNugetOverride.copyToGlobal getGitTag true 
+            IncrediblyUglyHackfulNugetOverride.copyToGlobal getVersion true 
         )
 
         Target.create "Help" (fun _ ->
