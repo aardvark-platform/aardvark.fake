@@ -1,6 +1,7 @@
 #load "loadall.fsx"
 #load "AdditionalSources.fsx"
 #load "AssemblyResources.fsx"
+//#load ".paket/load/netstandard2.0/build/build.group.fsx"
 
 namespace Aardvark.Fake
 
