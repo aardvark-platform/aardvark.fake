@@ -28,6 +28,24 @@ module Startup =
     let getReleaseNotes() =
         notes.Notes |> String.concat "^"
 
+    let createTag (newVersion : string) =
+        if CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
+            Trace.logfn "created tag %A" newVersion
+            try
+                Target.run 1 "Push" []
+
+                try
+                    Branches.pushTag "." "origin" newVersion
+                with e ->
+                    Trace.traceError "failed to push tag %A to origin (please push yourself)" 
+                    raise e
+            with e ->
+                Branches.deleteTag "." newVersion
+                Trace.logfn "deleted tag %A" newVersion
+                raise e
+        else
+            failwithf "could not create tag: %A" newVersion
+
     type private Arguments =
         | Debug
         | Verbose
@@ -384,6 +402,8 @@ module DefaultSetup =
                             Trace.traceError (string e)
                     | None ->
                         Trace.traceError (sprintf "Could not find nuget access key")
+
+                createTag tag
         )
 
         Target.create "AddNativeResources" (fun _ ->
