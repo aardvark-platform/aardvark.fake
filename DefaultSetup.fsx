@@ -26,7 +26,7 @@ module Startup =
         notes.NugetVersion
 
     let getReleaseNotes() =
-        notes.Notes |> String.concat System.Environment.NewLine
+        notes.Notes |> String.concat "^"
 
     type private Arguments =
         | Debug
@@ -276,7 +276,7 @@ module DefaultSetup =
 
             let tag = getVersion()
             //AdditionalSources.paketDependencies.Pack("bin", version = tag, releaseNotes = releaseNotes, buildPlatform = "AnyCPU")
-            let command = sprintf "pack bin --interproject-references fix --build-platform AnyCPU --version %s --release-notes %s" tag (getReleaseNotes())
+            let command = sprintf "pack bin --interproject-references fix --build-platform AnyCPU --version %s --release-notes \"%s\"" tag (getReleaseNotes())
             
             let command = 
                 if config.debug then
