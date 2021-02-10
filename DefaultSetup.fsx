@@ -188,6 +188,61 @@ module DefaultSetup =
             | _ -> printfn "aborting"
                    Environment.Exit(0) |> ignore
 
+
+    let push targets =
+
+        for (target, keyName) in targets do
+
+            let packages = !!"bin/*.nupkg"
+            let packageNameRx = Regex @"^(?<name>[a-zA-Z_0-9\.-]+?)\.(?<version>([0-9]+\.)*[0-9]+)(.*?)\.nupkg$"
+
+
+            let myPackages = 
+                packages 
+                    |> Seq.choose (fun p ->
+                        let m = packageNameRx.Match (Path.GetFileName p)
+                        if m.Success then 
+                            Some(m.Groups.["name"].Value)
+                        else
+                            None
+                    )
+                    |> Set.ofSeq
+
+     
+            let accessKey =
+                let accessKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".ssh")
+
+                let readKey dir =
+                    let accessKeyPath = Path.Combine(dir, keyName)
+                    if File.Exists accessKeyPath then
+                        let r = Some (File.ReadAllText accessKeyPath)
+                        Trace.logfn "key: %A" r.Value
+                        r
+                    else printfn "bad:%s" accessKeyPath; None
+
+                match readKey accessKeyPath with   
+                    | Some key -> Some key
+                    | _ -> readKey (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys"))
+
+
+            let tag = getVersion()
+            match accessKey with
+                | Some accessKey ->
+                    try
+                        for id in myPackages do
+                            let names = [ sprintf "bin/%s.%s.nupkg" id tag ]
+                            for packageName in names do
+                                Trace.logfn "pushing: %s" packageName
+                                //Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
+                                let command = sprintf "push %s --api-key %s --url %s" packageName accessKey target
+                                AdditionalSources.shellExecutePaket None command
+                    with e ->
+                        Trace.traceError (string e)
+                | None ->
+                    Trace.traceError (sprintf "Could not find nuget access key")
+
+            createTag tag
+
     let install(solutionNames : seq<string>) = 
         let core = Seq.head solutionNames
 
@@ -328,83 +383,7 @@ module DefaultSetup =
                 else
                     [||]
 
-            let allOk = 
-                targets |> Array.forall (fun (_,keyName) -> File.Exists <| Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", keyName))
-
-            let cloneIt dir =
-                Trace.logfn "cloning to: %s" dir
-                try 
-                    Repository.clone "." "git@github.com:haraldsteinlechner/aardvark-keys.git" dir
-                    System.Threading.Thread.Sleep 200
-                with e -> 
-                    Trace.traceError <| sprintf "could not clone aardvark keys. ask the platform team for assistance... (%A)" e.Message
-
-            if not allOk  then                  // ok let us try to find a key in the intaarnet.
-                let dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys")
-                if Directory.Exists dir then
-                    try 
-                        Trace.logfn "pulling: %s" dir
-                        Branches.pull dir "origin" "master"
-                    with e -> 
-                        Trace.logfn "could not pull keys dir."
-                        Directory.Delete(dir,true) |> ignore
-                        System.Threading.Thread.Sleep 200
-                        cloneIt dir
-                else
-                    cloneIt dir
-       
-
-            for (target, keyName) in targets do
-
-                let packages = !!"bin/*.nupkg"
-                let packageNameRx = Regex @"^(?<name>[a-zA-Z_0-9\.-]+?)\.(?<version>([0-9]+\.)*[0-9]+)(.*?)\.nupkg$"
-
-
-                let myPackages = 
-                    packages 
-                        |> Seq.choose (fun p ->
-                            let m = packageNameRx.Match (Path.GetFileName p)
-                            if m.Success then 
-                                Some(m.Groups.["name"].Value)
-                            else
-                                None
-                        )
-                        |> Set.ofSeq
-
-   
-                let accessKey =
-                    let accessKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".ssh")
-
-                    let readKey dir =
-                        let accessKeyPath = Path.Combine(dir, keyName)
-                        if File.Exists accessKeyPath then
-                            let r = Some (File.ReadAllText accessKeyPath)
-                            Trace.logfn "key: %A" r.Value
-                            r
-                        else printfn "bad:%s" accessKeyPath; None
-
-                    match readKey accessKeyPath with   
-                        | Some key -> Some key
-                        | _ -> readKey (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"aardvark-keys"))
-
-
-                let tag = getVersion()
-                match accessKey with
-                    | Some accessKey ->
-                        try
-                            for id in myPackages do
-                                let names = [ sprintf "bin/%s.%s.nupkg" id tag ]
-                                for packageName in names do
-                                    Trace.logfn "pushing: %s" packageName
-                                    //Paket.Dependencies.Push(packageName, apiKey = accessKey, url = target)
-                                    let command = sprintf "push %s --api-key %s --url %s" packageName accessKey target
-                                    AdditionalSources.shellExecutePaket None command
-                        with e ->
-                            Trace.traceError (string e)
-                    | None ->
-                        Trace.traceError (sprintf "Could not find nuget access key")
-
-                createTag tag
+            push targets
         )
 
         Target.create "AddNativeResources" (fun _ ->
