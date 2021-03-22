@@ -60,7 +60,19 @@ module IncrediblyUglyHackfulNugetOverride =
 
 
     let userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-    let hackedPackagesFile = Path.Combine(userProfile,".nuget","hackedFiles.txt")
+
+    let nugetPackagesPath =
+        let prefix = "global-packages:"
+        let result = DotNet.exec (DotNet.Options.withRedirectOutput true) "nuget" "locals -l global-packages"
+        let output = result.Results |> List.tryPick (fun msg -> if msg.Message.StartsWith(prefix) then Some msg.Message else None)
+
+        match output with
+        | Some o -> o.Substring(prefix.Length).Trim()
+        | _ -> Path.Combine(userProfile, ".nuget", "packages")
+
+    let hackedPackagesFile =
+        let dir = Directory.GetParent nugetPackagesPath
+        Path.Combine(dir.FullName, "hackedFiles.txt")
     
     let isHackActive () =
         if File.Exists hackedPackagesFile then
@@ -129,7 +141,7 @@ module IncrediblyUglyHackfulNugetOverride =
         for id in myPackages do
             let names = [ sprintf "bin/%s.%s.nupkg" id tag ]
             for packageName in names do
-                let target = Path.Combine(userProfile,".nuget","packages",id,string tag)
+                let target = Path.Combine(nugetPackagesPath,id,string tag)
                 if removeHacks then    
                     if Directory.Exists target then 
                         printfn "deleting: %s" target
