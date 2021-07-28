@@ -509,7 +509,7 @@ module DefaultSetup =
 
             let binDirs =
                 (
-                    dirs "bin" "(^netcoreapp.*$)|(^net4.*$)|^Debug$|^Release$" SearchOption.AllDirectories
+                    dirs "bin" "(^netcoreapp.*$)|(^net4.*$)|(^net5.0$)|^Debug$|^Release$" SearchOption.AllDirectories
                     |> Array.toList
                 )
 
