@@ -33,8 +33,6 @@ module Startup =
         if CommandHelper.directRunGitCommand "." (sprintf "tag -a %s -m \"%s\"" newVersion newVersion) then
             Trace.logfn "created tag %A" newVersion
             try
-                Target.run 1 "Push" []
-
                 try
                     Branches.pushTag "." "origin" newVersion
                 with e ->
