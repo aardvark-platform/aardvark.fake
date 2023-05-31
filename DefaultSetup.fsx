@@ -411,7 +411,7 @@ module DefaultSetup =
 
             let binDirs =
                 (
-                    dirs "bin" "(^netcoreapp.*$)|(^net4.*$)|^Debug$|^Release$" SearchOption.AllDirectories
+                    dirs "bin" "(^netcoreapp.*$)|(^net4.*$)|(^net5.0$)|^Debug$|^Release$" SearchOption.AllDirectories
                     |> Array.toList
                 )
 
@@ -436,7 +436,12 @@ module DefaultSetup =
 
                         for p in paths do
                             if File.Exists p then
-                                AssemblyResources.addFolder d p
+                                try 
+                                    Trace.logfn "adding folder %A to %A p" d p
+                                    AssemblyResources.addFolder d p
+                                with e -> 
+                                    Trace.logfn "could not add folder  %A to assembly %A with %A, retrying without symbols" d p e
+                                    AssemblyResources.addFolder' d p false 
                 | None ->
                     ()
         )

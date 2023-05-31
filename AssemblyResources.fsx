@@ -45,18 +45,21 @@ module AssemblyResources =
     let useDir d f =
         let old = System.Environment.CurrentDirectory
         System.Environment.CurrentDirectory <- d
-        let r = f ()
-        System.Environment.CurrentDirectory <- old
-        r
+        try
+            let r = f ()
+            r
+        finally
+            System.Environment.CurrentDirectory <- old
 
-    let addFolder (folder : string) (assemblyPath : string) =
+    let addFolder' (folder : string) (assemblyPath : string) (symbols : bool) =
         
         useDir (Path.Combine("bin","Release")) (fun () -> 
             let pdbPath = Path.ChangeExtension(assemblyPath, "pdb")
+
             let symbols = 
                 // only process symbols if they exist and we are on not on unix like systems (they use mono symbols). 
                 // this means: at the moment only windows packages support pdb debugging.
-                File.Exists (pdbPath) && System.Environment.OSVersion.Platform <> PlatformID.Unix
+                File.Exists (pdbPath) && System.Environment.OSVersion.Platform <> PlatformID.Unix && symbols
 
             let bytes = new MemoryStream(File.ReadAllBytes assemblyPath)
 
@@ -124,6 +127,9 @@ module AssemblyResources =
             Trace.logfn "added native resources to %A" (Path.GetFileName assemblyPath)
 
         )
+        
+    let addFolder (folder : string) (assemblyPath : string) = 
+        addFolder' folder assemblyPath true
 
     let getFilesAndFolders (folder : string) =
         if Directory.Exists folder then Directory.GetFileSystemEntries folder
